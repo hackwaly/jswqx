@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <script src="src/m65c02.js"></script>
+    <script src="src/wqx.js"></script>
+    <style>
+        #wqx {
+            width: 640px;
+            height: 320px;
+            background-color: #32cd32;
+        }
+    </style>
+</head>
+<body>
+<div id="wqx"></div>
+<script>
+    var wqx = new Wqx();
+    var div = document.getElementById('wqx');
+    div.addEventListener('dragover', function (evt){
+        evt.preventDefault();
+    });
+    div.addEventListener('drop', function (evt){
+        var file;
+        try {
+            file = evt.dataTransfer.files[0];
+        } catch(ex){}
+        var fileReader = new FileReader();
+        fileReader.addEventListener('loadend', function (evt){
+            wqx.loadBROM(fileReader.result);
+            wqx.run();
+        });
+        fileReader.readAsArrayBuffer(file);
+        evt.preventDefault();
+    });
+</script>
+</body>
+</html>
