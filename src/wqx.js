@@ -78,24 +78,24 @@ var Wqx = (function (){
         this.bbs_bank_header = [];
         this.may4000ptr = null;
         this.cpu = null;
-        this.initRomBuffer();
-        this.initNorBuffer();
-        this.initRamBuffer();
-        this.initIo();
+        this.initRom();
+        this.initNor();
+        this.initRam();
         this.initMemmap();
+        this.initIo();
         this.initCpu();
     }
 
 
-    Wqx.prototype.initRomBuffer = function (){
+    Wqx.prototype.initRom = function (){
         this.rom_buffer = new ArrayBuffer(0x8000 * 512);
         this.rom = new Uint8Array(this.rom_buffer);
         for (var i=0; i<256; i++) {
-            this.volume0_array[i] = getByteArray(this.rom_buffer, 0x8000 * i, 0x8000);
-            this.volume1_array[i] = getByteArray(this.rom_buffer, 0x8000 * (i + 256), 0x8000);
+            this.volume0_array[i] = getByteArray(this.rom, 0x8000 * i, 0x8000);
+            this.volume1_array[i] = getByteArray(this.rom, 0x8000 * (i + 256), 0x8000);
         }
     };
-    Wqx.prototype.initNorBuffer = function (){
+    Wqx.prototype.initNor = function (){
         this.nor_buffer = new ArrayBuffer(0x8000 * 16);
         this.nor = getByteArray(this.nor_buffer);
         this.nor_bank_header = [];
@@ -103,20 +103,9 @@ var Wqx = (function (){
             this.nor_bank_header[i] = getByteArray(this.nor, 0x8000 * i, 0x8000);
         }
     };
-    Wqx.prototype.initRamBuffer = function (){
+    Wqx.prototype.initRam = function (){
         this.ram_buffer = new ArrayBuffer(0x10000);
         this.ram = getByteArray(this.ram_buffer);
-    };
-    Wqx.prototype.initIo = function (){
-        this.io_map = new Array(0x10000);
-        this.io_read = this.readIO.bind(this);
-        this.io_write = this.writeIO.bind(this);
-    };
-    Wqx.prototype.readIO = function (){
-
-    };
-    Wqx.prototype.writeIO = function (){
-
     };
     Wqx.prototype.initMemmap = function (){
         this.memmap[map0000] = getByteArray(this.ram, 0, 0x2000);
@@ -140,16 +129,16 @@ var Wqx = (function (){
             this.bbs_bank_header[1] = getByteArray(this.nor_bank_header[0], 0x2000, 0x2000);
         } else {
             // Volume0,2
-            this.bbs_bank_header[1] = getByteArray(volume_array[0], 0x4000, 0x2000);
+            this.bbs_bank_header[1] = getByteArray(this.ram, 0x4000, 0x2000);
         }
         this.bbs_bank_header[2] = getByteArray(volume_array[0], 0x4000, 0x2000);
         this.bbs_bank_header[3] = getByteArray(volume_array[0], 0x6000, 0x2000);
         // 4567, 89AB, CDEF take first 4page 0000~7FFF in BROM
         for (var i = 0; i < 3; i++) {
             this.bbs_bank_header[i * 4 + 4] = getByteArray(volume_array[0], 0x8000 * (i + 1), 0x2000);
-            this.bbs_bank_header[i * 4 + 4] = getByteArray(volume_array[0], 0x8000 * (i + 1) + 0x2000, 0x2000);
-            this.bbs_bank_header[i * 4 + 4] = getByteArray(volume_array[0], 0x8000 * (i + 1) + 0x4000, 0x2000);
-            this.bbs_bank_header[i * 4 + 4] = getByteArray(volume_array[0], 0x8000 * (i + 1) + 0x6000, 0x2000);
+            this.bbs_bank_header[i * 4 + 5] = getByteArray(volume_array[0], 0x8000 * (i + 1) + 0x2000, 0x2000);
+            this.bbs_bank_header[i * 4 + 6] = getByteArray(volume_array[0], 0x8000 * (i + 1) + 0x4000, 0x2000);
+            this.bbs_bank_header[i * 4 + 7] = getByteArray(volume_array[0], 0x8000 * (i + 1) + 0x6000, 0x2000);
         }
     };
     Wqx.prototype.switch4000ToBFFF = function (bank){
@@ -176,13 +165,142 @@ var Wqx = (function (){
         this.memmap[map8000] = getByteArray(this.may4000ptr, 0x4000, 0x2000);
         this.memmap[mapA000] = getByteArray(this.may4000ptr, 0x6000, 0x2000);
     };
-    Wqx.prototype.initCpu = function (){
-        this.cpu = new M65C02Context();
-        this.cpu.ram = this.ram;
+
+    Wqx.prototype.initIo = function (){
+        this.io_map = new Array(0x10000);
+        for (var i=0; i<0x10000; i++) {
+            this.io_map[i] = i < 0x40;
+        }
+        this.io_read = this.readIO.bind(this);
+        this.io_write = this.writeIO.bind(this);
         // bit5 TIMER0 SOURCE CLOCK SELECT BIT1/TIMER CLOCK SELECT BIT2
         // bit3 TIMER1 SOURCE CLOCK SELECT BIT1/TIMER CLOCK SELECT BIT0
         // ([0C] & 3) * 1000 || [06] * 10 = LCDAddr
         this.ram[io0C_timer01_ctrl] = 0x28;
+        this.ram[io1B_pwm_data] = 0;
+        this.ram[io01_int_enable] = 0; // Disable all int
+        this.ram[io04_general_ctrl] = 0;
+        this.ram[io05_clock_ctrl] = 0;
+        this.ram[io08_port0_data] = 0;
+        this.ram[io00_bank_switch] = 0;
+        this.ram[io09_port1_data] = 0;
+    };
+    Wqx.prototype.readIO = function (addr){
+        switch (addr) {
+            case 0x00:
+                return this.read00BankSwitch();
+            case 0x04:
+                return this.read04StopTimer0();
+            case 0x05:
+                return this.read05StartTimer0;
+            case 0x06:
+                return this.read06StopTimer1();
+            case 0x07:
+                return this.read07StartTimer1();
+            case 0x08:
+                return this.readPort0();
+            case 0x09:
+                return this.readPort1();
+            default:
+                return this.ram[addr];
+        }
+    };
+    Wqx.prototype.read00BankSwitch = function (){
+        console.log('read00BankSwitch');
+    };
+    Wqx.prototype.read04StopTimer0 = function (){
+        console.log('read04StopTimer0');
+    };
+    Wqx.prototype.read05StartTimer0 = function (){
+        console.log('read05StartTimer0');
+    };
+    Wqx.prototype.read06StopTimer1 = function (){
+        console.log('read06StopTimer1');
+    };
+    Wqx.prototype.read07StartTimer1 = function (){
+        console.log('read06StopTimer1');
+    };
+    Wqx.prototype.readPort0 = function (){
+        console.log('readPort0');
+    };
+    Wqx.prototype.readPort1 = function (){
+        console.log('readPort1');
+    };
+    Wqx.prototype.writeIO = function (addr, value){
+        switch (addr) {
+            case 0x00:
+                return this.write00BankSwitch(value);
+            case 0x02:
+                return this.write02Timer0Value(value);
+            case 0x05:
+                return this.write05ClockCtrl(value);
+            case 0x06:
+                return this.write06LCDStartAddr(value);
+            case 0x07:
+                return this.write07StartTimer1(value);
+            case 0x08:
+                return this.writePort0(value);
+            case 0x09:
+                return this.writePort1(value);
+            case 0x0A:
+                return this.write0AROABBS(value);
+            case 0x0C:
+                return this.writeTimer01Control(value);
+            case 0x0D:
+                return this.write0DVolumeIDLCDSegCtrl(value);
+            case 0x0F:
+                return this.writeZeroPageBankswitch(value);
+            case 0x15:
+                return this.controlPort1(value);
+            case 0x20:
+                return this.write20JG(value);
+            default:
+                return void(0);
+        }
+    };
+    Wqx.prototype.write00BankSwitch = function (value){
+        console.log('write00BankSwitch');
+    };
+    Wqx.prototype.write02Timer0Value = function (value){
+        console.log('write02Timer0Value');
+    };
+    Wqx.prototype.write05ClockCtrl = function (value){
+        console.log('write05ClockCtrl');
+    };
+    Wqx.prototype.write06LCDStartAddr = function (value){
+        console.log('write06LCDStartAddr');
+    };
+    Wqx.prototype.write07StartTimer1 = function (value){
+        console.log('write07StartTimer1');
+    };
+    Wqx.prototype.writePort0 = function (value){
+        console.log('writePort0');
+    };
+    Wqx.prototype.writePort1 = function (value){
+        console.log('writePort1');
+    };
+    Wqx.prototype.write0AROABBS = function (value){
+        console.log('write0AROABBS');
+    };
+    Wqx.prototype.writeTimer01Control = function (value){
+        console.log('writeTimer01Control');
+    };
+    Wqx.prototype.write0DVolumeIDLCDSegCtrl = function (value){
+        console.log('write0DVolumeIDLCDSegCtrl');
+    };
+    Wqx.prototype.writeZeroPageBankswitch = function (value){
+        console.log('writeZeroPageBankswitch');
+    };
+    Wqx.prototype.controlPort1 = function (value){
+        console.log('controlPort1');
+    };
+    Wqx.prototype.write20JG = function (value){
+        console.log('write20JG');
+    };
+
+    Wqx.prototype.initCpu = function (){
+        this.cpu = new M65C02Context();
+        this.cpu.ram = this.ram;
         this.cpu.memmap = this.memmap;
         this.cpu.io_map = this.io_map;
         this.cpu.io_read = this.io_read;
@@ -220,7 +338,8 @@ var Wqx = (function (){
         this.initCpu();
         do {
             this.cpu.execute();
-        } while (this.cpu.cycles < 1000000);
+            console.log('reg_pc:' + this.cpu.reg_pc);
+        } while (this.cpu.cycles < 200);
     };
 
     return Wqx;
