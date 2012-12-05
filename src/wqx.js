@@ -312,7 +312,7 @@ var Wqx = (function (){
         // 00100100 unused P(bit5) = 1, I(bit3) = 1, B(bit4) = 0
         this.cpu.set_reg_ps(0x24);
         // assume 1FFC/1FFD in same stripe
-        this.cpu.reg_pc = 0xFFFC;
+        this.cpu.reg_pc = this.memmap[7][0x1FFC];
         this.cpu.reg_sp = 0x01FF;
         this.cpu.irq = 1;
         this.cpu.nmi = 1;
