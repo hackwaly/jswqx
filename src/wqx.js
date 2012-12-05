@@ -65,11 +65,11 @@ var Wqx = (function (){
 
     function Wqx(opts){
         opts = opts || {};
-        this.rom_buffer = null;
+        this.lcdOffShift0Flag = 0;
+
         this.rom = null;
         this.volume0_array = [];
         this.volume1_array = [];
-        this.nor_buffer = null;
         this.nor = null;
         this.nor_bank_header = [];
         this.ram_buffer = null;
@@ -88,16 +88,14 @@ var Wqx = (function (){
 
 
     Wqx.prototype.initRom = function (){
-        this.rom_buffer = new ArrayBuffer(0x8000 * 512);
-        this.rom = new Uint8Array(this.rom_buffer);
+        this.rom = new Uint8Array(0x8000 * 512);
         for (var i=0; i<256; i++) {
             this.volume0_array[i] = getByteArray(this.rom, 0x8000 * i, 0x8000);
             this.volume1_array[i] = getByteArray(this.rom, 0x8000 * (i + 256), 0x8000);
         }
     };
     Wqx.prototype.initNor = function (){
-        this.nor_buffer = new ArrayBuffer(0x8000 * 16);
-        this.nor = getByteArray(this.nor_buffer);
+        this.nor = getByteArray(0x8000 * 16);
         this.nor_bank_header = [];
         for (var i=0; i<16; i++) {
             this.nor_bank_header[i] = getByteArray(this.nor, 0x8000 * i, 0x8000);
@@ -236,8 +234,6 @@ var Wqx = (function (){
                 return this.write05ClockCtrl(value);
             case 0x06:
                 return this.write06LCDStartAddr(value);
-            case 0x07:
-                return this.write07StartTimer1(value);
             case 0x08:
                 return this.writePort0(value);
             case 0x09:
@@ -255,23 +251,56 @@ var Wqx = (function (){
             case 0x20:
                 return this.write20JG(value);
             default:
-                return void(0);
+                this.ram[addr] = value;
+                break;
         }
     };
-    Wqx.prototype.write00BankSwitch = function (value){
-        console.log('write00BankSwitch');
+    Wqx.prototype.write00BankSwitch = function (bank){
+        console.log('write00BankSwitch: ' + bank);
+        if (this.ram[io0A_roa] & 0x80) {
+            // ROA == 1
+            // RAM (norflash?!)
+            var norbank = bank & 0xF; // nor only have 0~F page
+            this.may4000ptr = this.nor_bank_header[norbank];
+            this.switch4000ToBFFF(norbank);
+        } else {
+            // ROA == 0
+            // BROM
+            if (this.ram[io0D_volumeid] & 0x01) {
+                // VolumeID == 1, 3
+                this.may4000ptr = this.volume1_array[bank];
+                this.switch4000ToBFFF(bank);
+            } else {
+                // VolumeID == 0, 2
+                this.may4000ptr = this.volume0_array[bank];
+                this.switch4000ToBFFF(bank);
+            }
+        }
+        // update at last
+        this.ram[io00_bank_switch] = bank;
     };
     Wqx.prototype.write02Timer0Value = function (value){
         console.log('write02Timer0Value');
     };
     Wqx.prototype.write05ClockCtrl = function (value){
-        console.log('write05ClockCtrl');
+        console.log('write05ClockCtrl: ' + value);
+        // FROM WQXSIM
+        // SPDC1016
+        if (this.ram[io05_clock_ctrl] & 0x8) {
+            // old bit3, LCDON
+            if ((value & 0xF) == 0) {
+                // new bit0~bit3 is 0
+                this.lcdOffShift0Flag = 1;
+            }
+        }
+        this.ram[io05_clock_ctrl] = value;
     };
     Wqx.prototype.write06LCDStartAddr = function (value){
         console.log('write06LCDStartAddr');
     };
     Wqx.prototype.write07StartTimer1 = function (value){
-        console.log('write07StartTimer1');
+        console.log('write07StartTimer1: ' + value);
+
     };
     Wqx.prototype.writePort0 = function (value){
         console.log('writePort0');
@@ -280,7 +309,33 @@ var Wqx = (function (){
         console.log('writePort1');
     };
     Wqx.prototype.write0AROABBS = function (value){
-        console.log('write0AROABBS');
+        console.log('write0AROABBS: ' + value);
+        if (value !== this.ram[io0A_roa]) {
+            // Update memory pointers only on value changed
+            var bank;
+            if (value & 0x80) {
+                // ROA == 1
+                // RAM (norflash)
+                bank = (this.ram[io00_bank_switch] & 0xF); // bank = 0~F
+                this.may4000ptr = this.nor_bank_header[bank];
+            } else {
+                // ROA == 0
+                // ROM (nor or ROM?)
+                bank = this.ram[io00_bank_switch];
+                if (this.ram[io0D_volumeid] & 1) {
+                    // Volume1,3
+                    this.may4000ptr = this.volume1_array[bank];
+                } else {
+                    // Volume0,2
+                    this.may4000ptr = this.volume0_array[bank];
+                }
+            }
+            this.ram[io0A_roa] = value;
+            this.switch4000ToBFFF(bank);
+            this.memmap[mapC000] = getByteArray(this.bbs_bank_header[value & 0xF], 0, 0x2000);
+        }
+        // in simulator destination memory is updated before call WriteIO0A_ROA_BBS
+        //fixedram0000[io0A_roa] = value;
     };
     Wqx.prototype.writeTimer01Control = function (value){
         console.log('writeTimer01Control');
