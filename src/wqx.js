@@ -217,6 +217,7 @@ var Wqx = (function (){
     };
     Wqx.prototype.read00BankSwitch = function (){
         console.log('read00BankSwitch');
+        return this.ram[io00_bank_switch];
     };
     Wqx.prototype.read04StopTimer0 = function (){
         console.log('read04StopTimer0');
@@ -495,7 +496,7 @@ var Wqx = (function (){
         this.initCpu();
         do {
             this.cpu.execute();
-        } while (this.cpu.cycles < 100000);
+        } while (this.cpu.cycles < 1000000);
     };
 
     return Wqx;
