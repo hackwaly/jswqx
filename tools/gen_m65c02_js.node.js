@@ -293,31 +293,6 @@ var $INVALID1 = '';
 var $INVALID2 = 'this.reg_pc = (this.reg_pc + 1) & 0xFFFF;';
 var $INVALID3 = 'this.reg_pc = (this.reg_pc + 2) & 0xFFFF;';
 
-var _IRQ = 0;
-var _NMI = 1;
-var _BRK = 2;
-function $INTERRUPT(t){
-    var ret = 'if (this.wai) { this.reg_pc = (this.reg_pc + 1) & 0xFFFF; this.wai = 0; }';
-    if (t === _IRQ) {
-        ret += 'if (!this.flag_i) {';
-    }
-    ret += $PUSH('(this.reg_pc >> 8)') +
-        $PUSH('(this.reg_pc & 0xFF)');
-    if (t === _IRQ) {
-        ret += 'this.flag_b = 0;';
-    }
-    ret += $PUSH('this.get_reg_ps()');
-
-    if (t === _IRQ || t === _BRK) {
-        ret += 'this.reg_pc = (this.memmap[7][0x1FFE]<<8)|(this.memmap[7][0x1FFF]);';
-    } else {
-        ret += 'this.reg_pc = (this.memmap[7][0x1FFA]<<8)|(this.memmap[7][0x1FFB]);';
-    }
-    if (t === _IRQ) {
-        ret += '}';
-    }
-    return ret;
-}
 var $BRK = '' +
     $PUSH('(this.reg_pc >> 8)') +
     $PUSH('(this.reg_pc & 0xFF)') +
