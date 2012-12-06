@@ -70,8 +70,19 @@ var Wqx = (function (){
         return new Uint8Array(buffer, byteOffset, byteLength);
     }
 
-    function Wqx(opts){
+    function Wqx(div, opts){
         opts = opts || {};
+
+        var doc = div.ownerDocument;
+        var canvas = doc.createElement('canvas');
+        this.width = div.offsetWidth;
+        this.height = div.offsetHeight;
+        canvas.width = this.width;
+        canvas.height = this.height;
+        div.appendChild(canvas);
+        this.canvas = canvas;
+        this.canvasCtx = canvas.getContext('2d');
+
         this.lcdoffshift0flag = 0;
         this.lcdbuffaddr = 0;
         this.timer0started = false;
@@ -298,6 +309,7 @@ var Wqx = (function (){
         }
         // update at last
         this.ram[io00_bank_switch] = bank;
+//        console.log(this.cpu.cycles);
     };
     Wqx.prototype.write02Timer0Value = function (value){
         console.log('write02Timer0Value');
@@ -316,7 +328,7 @@ var Wqx = (function (){
         this.ram[io05_clock_ctrl] = value;
     };
     Wqx.prototype.write06LCDStartAddr = function (value){
-        console.log('write06LCDStartAddr');
+        console.log('write06LCDStartAddr: ' + value);
         this.lcdbuffaddr = ((this.ram[io0C_lcd_config] & 0x3) << 12) | (value << 4);
         this.ram[io06_lcd_config] = value;
         // SPDC1016
@@ -359,12 +371,12 @@ var Wqx = (function (){
         //fixedram0000[io0A_roa] = value;
     };
     Wqx.prototype.writeTimer01Control = function (value){
-        console.log('writeTimer01Control');
+        console.log('writeTimer01Control: ' + value);
         this.lcdbuffaddr = ((value & 0x3) << 12) | (this.ram[io06_lcd_config] << 4);
         this.ram[io0C_lcd_config] = value;
     };
     Wqx.prototype.write0DVolumeIDLCDSegCtrl = function (value){
-        console.log('write0DVolumeIDLCDSegCtrl');
+        console.log('write0DVolumeIDLCDSegCtrl: ' + value);
         if (value ^ this.ram[io0D_volumeid] & 0x01) {
             // bit0 changed.
             // volume1,3 != volume0,2
@@ -492,11 +504,62 @@ var Wqx = (function (){
         }
     };
 
+    Wqx.prototype.updateLCD = function (){
+        var lcdBuffer = getByteArray(this.ram, this.lcdbuffaddr, 160*80/8);
+        var imageData = this.canvasCtx.createImageData(160, 80);
+        for (var i=0; i<80; i++) {
+            for (var j=0; j<20; j++) {
+                var p = (160 * i + 8 * j) * 4;
+                var pixelsByte = lcdBuffer[20*i+j];
+                console.log(pixelsByte);
+                var pixel1 = (pixelsByte & 0x01) ? 255 : 0;
+                var pixel2 = (pixelsByte & 0x02) ? 255 : 0;
+                var pixel3 = (pixelsByte & 0x04) ? 255 : 0;
+                var pixel4 = (pixelsByte & 0x08) ? 255 : 0;
+                var pixel5 = (pixelsByte & 0x10) ? 255 : 0;
+                var pixel6 = (pixelsByte & 0x20) ? 255 : 0;
+                var pixel7 = (pixelsByte & 0x40) ? 255 : 0;
+                var pixel8 = (pixelsByte & 0x80) ? 255 : 0;
+                imageData.data[p+0] = pixel1;
+                imageData.data[p+1] = pixel1;
+                imageData.data[p+2] = pixel1;
+                imageData.data[p+4] = pixel2;
+                imageData.data[p+5] = pixel2;
+                imageData.data[p+6] = pixel2;
+                imageData.data[p+8] = pixel3;
+                imageData.data[p+9] = pixel3;
+                imageData.data[p+10] = pixel3;
+                imageData.data[p+12] = pixel4;
+                imageData.data[p+13] = pixel4;
+                imageData.data[p+14] = pixel4;
+                imageData.data[p+16] = pixel5;
+                imageData.data[p+17] = pixel5;
+                imageData.data[p+18] = pixel5;
+                imageData.data[p+20] = pixel6;
+                imageData.data[p+21] = pixel6;
+                imageData.data[p+22] = pixel6;
+                imageData.data[p+24] = pixel7;
+                imageData.data[p+25] = pixel7;
+                imageData.data[p+26] = pixel7;
+                imageData.data[p+28] = pixel8;
+                imageData.data[p+29] = pixel8;
+                imageData.data[p+30] = pixel8;
+            }
+        }
+        this.canvasCtx.putImageData(imageData, 0, 0);
+    };
+
     Wqx.prototype.run = function (){
         this.initCpu();
         do {
             this.cpu.execute();
-        } while (this.cpu.cycles < 1000000);
+        } while (this.cpu.cycles < 400000);
+//        this.cpu.nmi = 0;
+//        this.cpu.execute();
+////        this.cpu.nmi = 1;
+//        do {
+//            this.cpu.execute();
+//        } while (this.cpu.cycles < 1000000);
     };
 
     return Wqx;

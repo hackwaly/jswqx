@@ -15,8 +15,8 @@
 <body>
 <div id="wqx"></div>
 <script>
-    var wqx = new Wqx();
     var div = document.getElementById('wqx');
+    var wqx = new Wqx(div);
     div.addEventListener('dragover', function (evt){
         evt.preventDefault();
     });
