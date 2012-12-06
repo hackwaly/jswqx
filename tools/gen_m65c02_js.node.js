@@ -197,23 +197,23 @@ var $CPY = 'this._tmp1 = this.reg_y - ' + $READ + ';' +
     'this.flag_c = this._tmp1 < 0 ? 0 : 1;' +
     $SETNZ('this._tmp1');
 
-var $DEA = 'this.reg_a--;' + $SETNZ('this.reg_a');
-var $DEX = 'this.reg_x--;' + $SETNZ('this.reg_x');
-var $DEY = 'this.reg_y--;' + $SETNZ('this.reg_y');
-var $DEC = 'this._tmp1 = ' + $READ + ' - 1;' +
+var $DEA = 'this.reg_a = (--this.reg_a & 0xFF);' + $SETNZ('this.reg_a');
+var $DEX = 'this.reg_x = (--this.reg_x & 0xFF);' + $SETNZ('this.reg_x');
+var $DEY = 'this.reg_y = (--this.reg_y & 0xFF);' + $SETNZ('this.reg_y');
+var $DEC = 'this._tmp1 = (' + $READ + ' - 1) & 0xFF;' +
     $SETNZ('this._tmp1') +
-    $WRITE('(this._tmp1 & 0xFF)');
+    $WRITE('this._tmp1');
+
+var $INA = 'this.reg_a = (++this.reg_a & 0xFF);' + $SETNZ('this.reg_a');
+var $INX = 'this.reg_x = (++this.reg_x & 0xFF);' + $SETNZ('this.reg_x');
+var $INY = 'this.reg_y = (++this.reg_y & 0xFF);' + $SETNZ('this.reg_y');
+var $INC = 'this._tmp1 = (' + $READ + ' + 1) & 0xFF;' +
+    $SETNZ('this._tmp1') +
+    $WRITE('this._tmp1');
 
 var $AND = 'this.reg_a &= ' + $READ + ';' + $SETNZ('this.reg_a');
 var $EOR = 'this.reg_a ^= ' + $READ + ';' + $SETNZ('this.reg_a');
 var $ORA = 'this.reg_a |= ' + $READ + ';' + $SETNZ('this.reg_a');
-
-var $INA = 'this.reg_a++;' + $SETNZ('this.reg_a');
-var $INX = 'this.reg_x++;' + $SETNZ('this.reg_x');
-var $INY = 'this.reg_y++;' + $SETNZ('this.reg_y');
-var $INC = 'this._tmp1 = ' + $READ + ' + 1;' +
-    $SETNZ('this._tmp1') +
-    $WRITE('(this._tmp1 & 0xFF)');
 
 var $JMP = 'this.reg_pc = this._addr;';
 var $JSR = 'this.reg_pc = (this.reg_pc - 1) & 0xFFFF;' +
