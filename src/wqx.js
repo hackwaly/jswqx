@@ -372,12 +372,12 @@ var Wqx = (function (){
                 // Volume1,3
                 this.fillC000BIOSBank(this.volume1array);
                 this.may4000ptr = this.volume1array[bank];
-                this.memmap[mapE000] = getByteArray(this.volume1array, 0x2000, 0x2000);
+                this.memmap[mapE000] = getByteArray(this.volume1array[0], 0x2000, 0x2000);
             } else {
                 // Volume0,2
                 this.fillC000BIOSBank(this.volume0array);
                 this.may4000ptr = this.volume0array[bank];
-                this.memmap[mapE000] = getByteArray(this.volume0array, 0x2000, 0x2000);
+                this.memmap[mapE000] = getByteArray(this.volume0array[0], 0x2000, 0x2000);
             }
             var roabbs = this.ram[io0A_roa];
             if (roabbs & 0x80) {
