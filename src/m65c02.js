@@ -53,20 +53,15 @@ M65C02Context.prototype.execute = function() {
                         if (this._code < 0x04) {
                             if (this._code < 0x02) {
                                 if (this._code < 0x01) {
-                                    if (this.wai) {
-                                        this.reg_pc = (this.reg_pc + 1) & 0xFFFF;
-                                        this.wai = 0;
-                                    }
                                     this.ram[this.reg_sp] = (this.reg_pc >> 8);
                                     this.reg_sp = --this.reg_sp & 0xFF | 0x100;
                                     this.ram[this.reg_sp] = (this.reg_pc & 0xFF);
                                     this.reg_sp = --this.reg_sp & 0xFF | 0x100;
-                                    this.flag_i = 1;
-                                    this.flag_b = 0;
+                                    this.flag_b = 1;
                                     this.ram[this.reg_sp] = this.get_reg_ps();
                                     this.reg_sp = --this.reg_sp & 0xFF | 0x100;
-                                    this.flag_b = 1;
-                                    this.reg_pc = (this.memmap[7][0x1FFE] << 8) | (this.memmap[7][0x1FFF]);
+                                    this.flag_i = 1;
+                                    this.reg_pc = (this.memmap[7][0x1FFF] << 8) | (this.memmap[7][0x1FFE]);
                                     this.cycles += 7;
                                 } else {
                                     this._tmp1 = (this.memmap[this.reg_pc >> 13][this.reg_pc & 0x1FFF] + this.reg_x) & 0xFF;
@@ -2667,11 +2662,11 @@ M65C02Context.prototype.execute = function() {
             this.ram[this.reg_sp] = (this.reg_pc & 0xFF);
             this.reg_sp = --this.reg_sp & 0xFF | 0x100;
             this.flag_i = 1;
-            this.flag_b = 0;
             this.ram[this.reg_sp] = this.get_reg_ps();
             this.reg_sp = --this.reg_sp & 0xFF | 0x100;
-            this.flag_b = 1;
-            this.reg_pc = (this.memmap[7][0x1FFA] << 8) | (this.memmap[7][0x1FFB]);
+            this.reg_pc = (this.memmap[7][0x1FFB] << 8) | (this.memmap[7][0x1FFA]);
+            this.nmi = 1;
+            this.cycles += 7;
         }
         if (!this.irq) {
             if (this.wai) {
@@ -2683,12 +2678,12 @@ M65C02Context.prototype.execute = function() {
                 this.reg_sp = --this.reg_sp & 0xFF | 0x100;
                 this.ram[this.reg_sp] = (this.reg_pc & 0xFF);
                 this.reg_sp = --this.reg_sp & 0xFF | 0x100;
-                this.flag_i = 1;
                 this.flag_b = 0;
                 this.ram[this.reg_sp] = this.get_reg_ps();
                 this.reg_sp = --this.reg_sp & 0xFF | 0x100;
-                this.flag_b = 1;
-                this.reg_pc = (this.memmap[7][0x1FFE] << 8) | (this.memmap[7][0x1FFF]);
+                this.reg_pc = (this.memmap[7][0x1FFF] << 8) | (this.memmap[7][0x1FFE]);
+                this.flag_i = 1;
+                this.cycles += 7;
             }
         }
     }

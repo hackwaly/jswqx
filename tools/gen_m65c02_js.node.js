@@ -302,11 +302,12 @@ function $INTERRUPT(t){
         ret += 'if (!this.flag_i) {';
     }
     ret += $PUSH('(this.reg_pc >> 8)') +
-        $PUSH('(this.reg_pc & 0xFF)') +
-        $SEI +
-        'this.flag_b = 0;' +
-        $PUSH('this.get_reg_ps()') +
-        'this.flag_b = 1;';
+        $PUSH('(this.reg_pc & 0xFF)');
+    if (t === _IRQ) {
+        ret += 'this.flag_b = 0;';
+    }
+    ret += $PUSH('this.get_reg_ps()');
+
     if (t === _IRQ || t === _BRK) {
         ret += 'this.reg_pc = (this.memmap[7][0x1FFE]<<8)|(this.memmap[7][0x1FFF]);';
     } else {
@@ -317,9 +318,35 @@ function $INTERRUPT(t){
     }
     return ret;
 }
-var $IRQ = $INTERRUPT(_IRQ);
-var $NMI = $INTERRUPT(_NMI);
-var $BRK = $INTERRUPT(_BRK);
+var $BRK = '' +
+    $PUSH('(this.reg_pc >> 8)') +
+    $PUSH('(this.reg_pc & 0xFF)') +
+    'this.flag_b = 1;' +
+    $PUSH('this.get_reg_ps()') +
+    'this.flag_i = 1;' +
+    'this.reg_pc = (this.memmap[7][0x1FFF]<<8)|(this.memmap[7][0x1FFE]);';
+
+var $IRQ = '' +
+    'if (this.wai) { this.reg_pc = (this.reg_pc + 1) & 0xFFFF; this.wai = 0; }' +
+    'if (!this.flag_i) {' +
+        $PUSH('(this.reg_pc >> 8)') +
+        $PUSH('(this.reg_pc & 0xFF)') +
+        'this.flag_b = 0;' +
+        $PUSH('this.get_reg_ps()') +
+        'this.reg_pc = (this.memmap[7][0x1FFF]<<8)|(this.memmap[7][0x1FFE]);' +
+        'this.flag_i = 1;' +
+        $CYC(7) +
+    '}';
+var $NMI = '' +
+    'if (this.wai) { this.reg_pc = (this.reg_pc + 1) & 0xFFFF; this.wai = 0; }' +
+    $PUSH('(this.reg_pc >> 8)') +
+    $PUSH('(this.reg_pc & 0xFF)') +
+    'this.flag_i = 1;' +
+    $PUSH('this.get_reg_ps()') +
+    'this.reg_pc = (this.memmap[7][0x1FFB]<<8)|(this.memmap[7][0x1FFA]);' +
+    'this.nmi = 1;' +
+    $CYC(7);
+
 
 var INSTRUCTIONS = {};
 INSTRUCTIONS[0x00] = [       $BRK,          $CYC(7)].join('');
