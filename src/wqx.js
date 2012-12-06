@@ -51,6 +51,13 @@ var Wqx = (function (){
     var mapC000 = 6;
     var mapE000 = 7;
 
+    var SPDC1016Frequency = 3686400;
+    function memcpy(dest, src, length){
+        for (var i=0; i<length; i++) {
+            dest[i] = src[i];
+        }
+    }
+
     function getByteArray(buffer, byteOffset, byteLength){
         byteOffset = byteOffset | 0;
         if (!(buffer instanceof ArrayBuffer)) {
@@ -65,17 +72,21 @@ var Wqx = (function (){
 
     function Wqx(opts){
         opts = opts || {};
-        this.lcdOffShift0Flag = 0;
+        this.lcdoffshift0flag = 0;
+        this.lcdbuffaddr = 0;
+        this.timer0started = false;
+        this.timer0waveoutstart = false;
+        this.ptr40 = null;
+        this.zp40cache = null;
 
         this.rom = null;
-        this.volume0_array = [];
-        this.volume1_array = [];
+        this.volume0array = [];
+        this.volume1array = [];
         this.nor = null;
-        this.nor_bank_header = [];
-        this.ram_buffer = null;
+        this.norbankheader = [];
         this.ram = null;
         this.memmap = [];
-        this.bbs_bank_header = [];
+        this.bbsbankheader = [];
         this.may4000ptr = null;
         this.cpu = null;
         this.initRom();
@@ -90,20 +101,21 @@ var Wqx = (function (){
     Wqx.prototype.initRom = function (){
         this.rom = new Uint8Array(0x8000 * 512);
         for (var i=0; i<256; i++) {
-            this.volume0_array[i] = getByteArray(this.rom, 0x8000 * i, 0x8000);
-            this.volume1_array[i] = getByteArray(this.rom, 0x8000 * (i + 256), 0x8000);
+            this.volume0array[i] = getByteArray(this.rom, 0x8000 * i, 0x8000);
+            this.volume1array[i] = getByteArray(this.rom, 0x8000 * (i + 256), 0x8000);
         }
     };
     Wqx.prototype.initNor = function (){
-        this.nor = getByteArray(0x8000 * 16);
-        this.nor_bank_header = [];
+        this.nor = new Uint8Array(0x8000 * 16);
+        this.norbankheader = [];
         for (var i=0; i<16; i++) {
-            this.nor_bank_header[i] = getByteArray(this.nor, 0x8000 * i, 0x8000);
+            this.norbankheader[i] = getByteArray(this.nor, 0x8000 * i, 0x8000);
         }
     };
     Wqx.prototype.initRam = function (){
-        this.ram_buffer = new ArrayBuffer(0x10000);
-        this.ram = getByteArray(this.ram_buffer);
+        this.ram = new Uint8Array(0x10000);
+        this.ptr40 = getByteArray(this.ram, 0x40, 0x40);
+        this.zp40cache = new Uint8Array(0x40);
     };
     Wqx.prototype.initMemmap = function (){
         this.memmap[map0000] = getByteArray(this.ram, 0, 0x2000);
@@ -114,29 +126,29 @@ var Wqx = (function (){
         this.memmap[mapA000] = getByteArray(this.ram, 0xA000, 0x2000);
         this.memmap[mapC000] = getByteArray(this.ram, 0xC000, 0x2000);
         this.memmap[mapE000] = getByteArray(this.ram, 0xE000, 0x2000);
-        this.fillC000BiosBank(this.volume0_array);
-        this.memmap[mapC000] = getByteArray(this.bbs_bank_header[0], 0, 0x2000);
-        this.may4000ptr = this.volume0_array[0];
-        this.memmap[mapE000] = getByteArray(this.volume0_array[0], 0x2000, 0x2000);
+        this.fillC000BIOSBank(this.volume0array);
+        this.memmap[mapC000] = getByteArray(this.bbsbankheader[0], 0, 0x2000);
+        this.may4000ptr = this.volume0array[0];
+        this.memmap[mapE000] = getByteArray(this.volume0array[0], 0x2000, 0x2000);
         this.switch4000ToBFFF(0);
     };
-    Wqx.prototype.fillC000BiosBank = function (volume_array){
-        this.bbs_bank_header[0] = getByteArray(volume_array[0], 0, 0x2000);
+    Wqx.prototype.fillC000BIOSBank = function (volume_array){
+        this.bbsbankheader[0] = getByteArray(volume_array[0], 0, 0x2000);
         if (this.ram[io0D_volumeid] & 1) {
             // Volume1,3
-            this.bbs_bank_header[1] = getByteArray(this.nor_bank_header[0], 0x2000, 0x2000);
+            this.bbsbankheader[1] = getByteArray(this.norbankheader[0], 0x2000, 0x2000);
         } else {
             // Volume0,2
-            this.bbs_bank_header[1] = getByteArray(this.ram, 0x4000, 0x2000);
+            this.bbsbankheader[1] = getByteArray(this.ram, 0x4000, 0x2000);
         }
-        this.bbs_bank_header[2] = getByteArray(volume_array[0], 0x4000, 0x2000);
-        this.bbs_bank_header[3] = getByteArray(volume_array[0], 0x6000, 0x2000);
+        this.bbsbankheader[2] = getByteArray(volume_array[0], 0x4000, 0x2000);
+        this.bbsbankheader[3] = getByteArray(volume_array[0], 0x6000, 0x2000);
         // 4567, 89AB, CDEF take first 4page 0000~7FFF in BROM
         for (var i = 0; i < 3; i++) {
-            this.bbs_bank_header[i * 4 + 4] = getByteArray(volume_array[0], 0x8000 * (i + 1), 0x2000);
-            this.bbs_bank_header[i * 4 + 5] = getByteArray(volume_array[0], 0x8000 * (i + 1) + 0x2000, 0x2000);
-            this.bbs_bank_header[i * 4 + 6] = getByteArray(volume_array[0], 0x8000 * (i + 1) + 0x4000, 0x2000);
-            this.bbs_bank_header[i * 4 + 7] = getByteArray(volume_array[0], 0x8000 * (i + 1) + 0x6000, 0x2000);
+            this.bbsbankheader[i * 4 + 4] = getByteArray(volume_array[0], 0x8000 * (i + 1), 0x2000);
+            this.bbsbankheader[i * 4 + 5] = getByteArray(volume_array[0], 0x8000 * (i + 1) + 0x2000, 0x2000);
+            this.bbsbankheader[i * 4 + 6] = getByteArray(volume_array[0], 0x8000 * (i + 1) + 0x4000, 0x2000);
+            this.bbsbankheader[i * 4 + 7] = getByteArray(volume_array[0], 0x8000 * (i + 1) + 0x6000, 0x2000);
         }
     };
     Wqx.prototype.switch4000ToBFFF = function (bank){
@@ -150,8 +162,8 @@ var Wqx = (function (){
                 // Volume1,3
                 // 4000~7FFF is 0 page of Nor.
                 // 8000~BFFF is relative to may4000ptr
-                this.memmap[map4000] = getByteArray(this.nor_bank_header[0], 0, 0x2000);
-                this.memmap[map6000] = getByteArray(this.nor_bank_header[0], 0x2000, 0x2000);
+                this.memmap[map4000] = getByteArray(this.norbankheader[0], 0, 0x2000);
+                this.memmap[map6000] = getByteArray(this.norbankheader[0], 0x2000, 0x2000);
             } else {
                 // Volume0,2
                 // 4000~5FFF is RAM
@@ -208,12 +220,19 @@ var Wqx = (function (){
     };
     Wqx.prototype.read04StopTimer0 = function (){
         console.log('read04StopTimer0');
+        this.timer0started = false;
+        if (this.timer0waveoutstart) {
+            this.timer0waveoutstart = false;
+        }
+        return this.ram[io04_general_ctrl];
     };
     Wqx.prototype.read05StartTimer0 = function (){
         console.log('read05StartTimer0');
+
     };
     Wqx.prototype.read06StopTimer1 = function (){
         console.log('read06StopTimer1');
+
     };
     Wqx.prototype.read07StartTimer1 = function (){
         console.log('read06StopTimer1');
@@ -260,19 +279,19 @@ var Wqx = (function (){
         if (this.ram[io0A_roa] & 0x80) {
             // ROA == 1
             // RAM (norflash?!)
-            var norbank = bank & 0xF; // nor only have 0~F page
-            this.may4000ptr = this.nor_bank_header[norbank];
+            var norbank = bank & 0x0F; // nor only have 0~F page
+            this.may4000ptr = this.norbankheader[norbank];
             this.switch4000ToBFFF(norbank);
         } else {
             // ROA == 0
             // BROM
             if (this.ram[io0D_volumeid] & 0x01) {
                 // VolumeID == 1, 3
-                this.may4000ptr = this.volume1_array[bank];
+                this.may4000ptr = this.volume1array[bank];
                 this.switch4000ToBFFF(bank);
             } else {
                 // VolumeID == 0, 2
-                this.may4000ptr = this.volume0_array[bank];
+                this.may4000ptr = this.volume0array[bank];
                 this.switch4000ToBFFF(bank);
             }
         }
@@ -286,21 +305,22 @@ var Wqx = (function (){
         console.log('write05ClockCtrl: ' + value);
         // FROM WQXSIM
         // SPDC1016
-        if (this.ram[io05_clock_ctrl] & 0x8) {
+        if (this.ram[io05_clock_ctrl] & 0x08) {
             // old bit3, LCDON
-            if ((value & 0xF) == 0) {
+            if ((value & 0x0F) == 0) {
                 // new bit0~bit3 is 0
-                this.lcdOffShift0Flag = 1;
+                this.lcdoffshift0flag = 1;
             }
         }
         this.ram[io05_clock_ctrl] = value;
     };
     Wqx.prototype.write06LCDStartAddr = function (value){
         console.log('write06LCDStartAddr');
-    };
-    Wqx.prototype.write07StartTimer1 = function (value){
-        console.log('write07StartTimer1: ' + value);
-
+        this.lcdbuffaddr = ((this.ram[io0C_lcd_config] & 0x3) << 12) | (value << 4);
+        this.ram[io06_lcd_config] = value;
+        // SPDC1016
+        // don't know how wqxsim works.
+        this.ram[io09_port1_data] &= 0xFE; // remove bit0 of port1 (keypad)
     };
     Wqx.prototype.writePort0 = function (value){
         console.log('writePort0');
@@ -316,38 +336,121 @@ var Wqx = (function (){
             if (value & 0x80) {
                 // ROA == 1
                 // RAM (norflash)
-                bank = (this.ram[io00_bank_switch] & 0xF); // bank = 0~F
-                this.may4000ptr = this.nor_bank_header[bank];
+                bank = (this.ram[io00_bank_switch] & 0x0F); // bank = 0~F
+                this.may4000ptr = this.norbankheader[bank];
             } else {
                 // ROA == 0
                 // ROM (nor or ROM?)
                 bank = this.ram[io00_bank_switch];
-                if (this.ram[io0D_volumeid] & 1) {
+                if (this.ram[io0D_volumeid] & 0x01) {
                     // Volume1,3
-                    this.may4000ptr = this.volume1_array[bank];
+                    this.may4000ptr = this.volume1array[bank];
                 } else {
                     // Volume0,2
-                    this.may4000ptr = this.volume0_array[bank];
+                    this.may4000ptr = this.volume0array[bank];
                 }
             }
             this.ram[io0A_roa] = value;
             this.switch4000ToBFFF(bank);
-            this.memmap[mapC000] = getByteArray(this.bbs_bank_header[value & 0xF], 0, 0x2000);
+            this.memmap[mapC000] = getByteArray(this.bbsbankheader[value & 0x0F], 0, 0x2000);
         }
         // in simulator destination memory is updated before call WriteIO0A_ROA_BBS
         //fixedram0000[io0A_roa] = value;
     };
     Wqx.prototype.writeTimer01Control = function (value){
         console.log('writeTimer01Control');
+        this.lcdbuffaddr = ((value & 0x3) << 12) | (this.ram[io06_lcd_config] << 4);
+        this.ram[io0C_lcd_config] = value;
     };
     Wqx.prototype.write0DVolumeIDLCDSegCtrl = function (value){
         console.log('write0DVolumeIDLCDSegCtrl');
+        if (value ^ this.ram[io0D_volumeid] & 0x01) {
+            // bit0 changed.
+            // volume1,3 != volume0,2
+            var bank = this.ram[io00_bank_switch];
+            if (value & 0x01) {
+                // Volume1,3
+                this.fillC000BIOSBank(this.volume1array);
+                this.may4000ptr = this.volume1array[bank];
+                this.memmap[mapE000] = getByteArray(this.volume1array, 0x2000, 0x2000);
+            } else {
+                // Volume0,2
+                this.fillC000BIOSBank(this.volume0array);
+                this.may4000ptr = this.volume0array[bank];
+                this.memmap[mapE000] = getByteArray(this.volume0array, 0x2000, 0x2000);
+            }
+            var roabbs = this.ram[io0A_roa];
+            if (roabbs & 0x80) {
+                // ROA == 1
+                // RAM(nor)
+                bank = bank & 0x0F;
+                this.may4000ptr = this.norbankheader[bank];
+            }
+            this.memmap[mapC000] = this.bbsbankheader[roabbs & 0x0F];
+            this.switch4000ToBFFF(bank);
+        }
+        this.ram[io0D_volumeid] = value;
     };
     Wqx.prototype.writeZeroPageBankswitch = function (value){
-        console.log('writeZeroPageBankswitch');
+        console.log('writeZeroPageBankswitch: ' + value);
+        var oldzpbank = this.ram[io0F_zp_bsw] & 0x07;
+        var newzpbank = (value & 0x07);
+        var newzpptr = this.getZeroPagePointer(newzpbank);
+        if (oldzpbank !== newzpbank) {
+            if (oldzpbank === 0) {
+                // oldzpbank == 0
+                memcpy(this.zp40cache, this.ptr40, 0x40); // backup fixed 40~80 to cache
+                memcpy(this.ptr40, newzpptr, 0x40); // copy newbank to 40
+            } else {
+                // dangerous if exchange 00 <-> 40
+                // oldaddr maybe 0 or 200~300
+                var oldzpptr = this.getZeroPagePointer(oldzpbank);
+                memcpy(oldzpptr, this.ptr40, 0x40);
+                if (newzpbank !== 0) {
+                    memcpy(this.ptr40, newzpptr, 0x40);
+                } else {
+                    memcpy(this.ptr40, this.zp40cache, 0x40); // copy backup to 40
+                }
+            }
+        }
+        this.ram[io0F_zp_bsw] = value;
+
+    };
+    Wqx.prototype.getZeroPagePointer = function (bank){
+        //.text:0040BFD0 bank            = byte ptr  4
+        //.text:0040BFD0
+        //.text:0040BFD0                 mov     al, [esp+bank]
+        //.text:0040BFD4                 cmp     al, 4
+        //.text:0040BFD6                 jnb     short loc_40BFE5 ; if (bank < 4) {
+        //.text:0040BFD8                 xor     eax, eax        ; bank == 0,1,2,3
+        //.text:0040BFD8                                         ; set bank = 0
+        //.text:0040BFDA                 and     eax, 0FFFFh     ; WORD(bank)
+        //.text:0040BFDF                 add     eax, offset gFixedRAM0 ; result = &gFixedRAM0[WORD(bank)];
+        //.text:0040BFE4                 retn                    ; }
+        //.text:0040BFE5 ; ---------------------------------------------------------------------------
+        //.text:0040BFE5
+        //.text:0040BFE5 loc_40BFE5:                             ; CODE XREF: GetZeroPagePointer+6j
+        //.text:0040BFE5                 movzx   ax, al          ; 4,5,6,7
+        //.text:0040BFE9                 add     eax, 4          ; bank+=4
+        //.text:0040BFEC                 shl     eax, 6          ; bank *= 40;
+        //.text:0040BFEF                 and     eax, 0FFFFh     ; WORD(bank)
+        //.text:0040BFF4                 add     eax, offset gFixedRAM0
+        //.text:0040BFF9                 retn
+        if (bank >= 4) {
+            // 4,5,6,7
+            // 4 -> 200 5-> 240
+            return getByteArray(this.ram, (bank + 4) << 6, 0x40);
+        } else {
+            // 0,1,2,3
+            return getByteArray(this.ram, 0, 0x40);
+        }
     };
     Wqx.prototype.controlPort1 = function (value){
-        console.log('controlPort1');
+        console.log('controlPort1: ' + value);
+        this.ram[io15_port1_dir] = value;
+        this.updateKeypadRegisters();
+    };
+    Wqx.prototype.updateKeypadRegisters = function (){
     };
     Wqx.prototype.write20JG = function (value){
         console.log('write20JG');
@@ -376,15 +479,14 @@ var Wqx = (function (){
     };
 
     Wqx.prototype.loadBROM = function (buffer){
-        var bufferView = getByteArray(buffer);
         var byteOffset = 0;
         while (byteOffset < buffer.byteLength) {
-            for (var i=0; i<0x4000; i++) {
-                this.rom[byteOffset+0x4000+i] = bufferView[byteOffset+i];
-            }
-            for (var j=0; j<0x4000; j++) {
-                this.rom[byteOffset+j] = bufferView[byteOffset+0x4000+j];
-            }
+            var bufferSrc1 = getByteArray(buffer, byteOffset, 0x4000);
+            var bufferSrc2 = getByteArray(buffer, byteOffset + 0x4000, 0x4000);
+            var bufferDest1 = getByteArray(this.rom, byteOffset + 0x4000, 0x4000);
+            var bufferDest2 = getByteArray(this.rom, byteOffset, 0x4000);
+            memcpy(bufferDest1, bufferSrc1, 0x4000);
+            memcpy(bufferDest2, bufferSrc2, 0x4000);
             byteOffset += 0x8000;
         }
     };
@@ -393,8 +495,7 @@ var Wqx = (function (){
         this.initCpu();
         do {
             this.cpu.execute();
-            console.log('reg_pc:' + this.cpu.reg_pc);
-        } while (this.cpu.cycles < 200);
+        } while (this.cpu.cycles < 100000);
     };
 
     return Wqx;
