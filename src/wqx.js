@@ -680,8 +680,9 @@ var Wqx = (function (){
                 debugger;
             }
             this.cpu.execute();
-            if (typeof DebugCpuRegsRecords !== 'undefined') {
-                var logRow = DebugCpuRegsRecords[this.totalInsts];
+            if (typeof DebugCpuRegsRecords !== 'undefined' &&
+                this.totalInsts >= 123224) {
+                var logRow = DebugCpuRegsRecords[this.totalInsts-123224];
                 if (!(logRow.reg_a === this.cpu.reg_a &&
                     logRow.reg_x === this.cpu.reg_x &&
                     logRow.reg_y === this.cpu.reg_y &&
