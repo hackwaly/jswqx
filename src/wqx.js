@@ -350,11 +350,13 @@ var Wqx = (function (){
 //        console.log(this.cpu.cycles);
     };
     Wqx.prototype.write02Timer0Value = function (value){
-//        console.log('write02Timer0Value: ' + value);
+        console.log('write02Timer0Value: ' + value);
         if (this.timer0started) {
-            this.prevtimer0value = value;
+            this.timer0startcycles = (this.getCpuCycles() -
+                (value * SPDC1016Frequency / 10));
+        } else {
+            this.timer0value = value;
         }
-        this.ram[io02_timer0_val] = value;
     };
     Wqx.prototype.write05ClockCtrl = function (value){
 //        console.log('write05ClockCtrl: ' + value);
@@ -641,7 +643,7 @@ var Wqx = (function (){
         if ((this.frameCounter % FrameRate) === NMIFrameIndex) {
             this.shouldNmi = true;
         }
-//        document.title = (this.frameCounter);
+        document.title = (this.frameCounter);
         this.updateLCD();
     };
 
