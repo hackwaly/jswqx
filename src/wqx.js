@@ -5,7 +5,6 @@ var Wqx = (function (){
     var io00_bank_switch = 0x00;
     var io01_int_enable = 0x01;
     var io01_int_status = 0x01;
-    var io02_timer0_val = 0x02;
     var io03_timer1_val = 0x03;
     var io04_stop_timer0 = 0x04;
     var io04_general_ctrl = 0x04;
@@ -52,6 +51,10 @@ var Wqx = (function (){
     var mapE000 = 7;
 
     var SPDC1016Frequency = 3686400;
+    var FrameRate = 20;
+    var NMIFrameIndex = FrameRate / 2;
+    var CyclesPerFrame = SPDC1016Frequency / FrameRate;
+
     function memcpy(dest, src, length){
         for (var i=0; i<length; i++) {
             dest[i] = src[i];
@@ -83,10 +86,16 @@ var Wqx = (function (){
         this.canvas = canvas;
         this.canvasCtx = canvas.getContext('2d');
 
+        this.frameCounter = 0;
+        this.shouldIrq = false;
+        this.shouldNmi = false;
+        this.frameTimer = null;
+
         this.lcdoffshift0flag = 0;
         this.lcdbuffaddr = 0;
         this.timer0started = false;
-        this.timer0waveoutstart = false;
+        this.timer0value = 0;
+//        this.timer0waveoutstart = false;
         this.ptr40 = null;
         this.zp40cache = null;
 
@@ -210,6 +219,8 @@ var Wqx = (function (){
         switch (addr) {
             case 0x00:
                 return this.read00BankSwitch();
+            case 0x02:
+                return this.read02Timer0Value();
             case 0x04:
                 return this.read04StopTimer0();
             case 0x05:
@@ -227,20 +238,47 @@ var Wqx = (function (){
         }
     };
     Wqx.prototype.read00BankSwitch = function (){
-        console.log('read00BankSwitch');
+//        console.log('read00BankSwitch');
         return this.ram[io00_bank_switch];
     };
     Wqx.prototype.read04StopTimer0 = function (){
         console.log('read04StopTimer0');
-        this.timer0started = false;
-        if (this.timer0waveoutstart) {
-            this.timer0waveoutstart = false;
+        if (this.timer0started) {
+            this.timer0value = this.read02Timer0Value();
+            this.timer0started = false;
         }
+//        if (this.timer0waveoutstart) {
+//            this.timer0waveoutstart = false;
+//        }
         return this.ram[io04_general_ctrl];
+    };
+    Wqx.prototype.getCpuCycles = function (){
+        return (this.frameCounter * CyclesPerFrame) + this.cpu.cycles;
+    };
+    Wqx.prototype.read02Timer0Value = function (){
+        console.log('read02Timer0Value');
+        if (this.timer0started) {
+            this.timer0value = Math.floor((this.getCpuCycles() - this.timer0startcycles) /
+                SPDC1016Frequency) & 0xFF;
+        } else {
+            return this.timer0value;
+        }
     };
     Wqx.prototype.read05StartTimer0 = function (){
         console.log('read05StartTimer0');
-
+        this.timer0started = true;
+        this.timer0startcycles = this.getCpuCycles();
+//        if (this.read02Timer0Value() == 0x3F) {
+//            //gTimer0WaveoutStarted = 1;
+//            //mayTimer0Var1 = 0;
+//            //maypTimer0VarA8 = (int)&unk_4586A8;
+//            //mayTimer0Var2 = 0;
+//            //mayIO2345Var1 = 0;
+//            //ResetWaveout(&pwh);
+//            //OpenWaveout((DWORD_PTR)&pwh, 0x1F40u);
+//            this.timer0waveoutstart = true;
+//        }
+        return this.ram[io05_clock_ctrl]; // follow rulz by GGV
     };
     Wqx.prototype.read06StopTimer1 = function (){
         console.log('read06StopTimer1');
@@ -287,7 +325,7 @@ var Wqx = (function (){
         }
     };
     Wqx.prototype.write00BankSwitch = function (bank){
-        console.log('write00BankSwitch: ' + bank);
+//        console.log('write00BankSwitch: ' + bank);
         if (this.ram[io0A_roa] & 0x80) {
             // ROA == 1
             // RAM (norflash?!)
@@ -312,10 +350,14 @@ var Wqx = (function (){
 //        console.log(this.cpu.cycles);
     };
     Wqx.prototype.write02Timer0Value = function (value){
-        console.log('write02Timer0Value');
+//        console.log('write02Timer0Value: ' + value);
+        if (this.timer0started) {
+            this.prevtimer0value = value;
+        }
+        this.ram[io02_timer0_val] = value;
     };
     Wqx.prototype.write05ClockCtrl = function (value){
-        console.log('write05ClockCtrl: ' + value);
+//        console.log('write05ClockCtrl: ' + value);
         // FROM WQXSIM
         // SPDC1016
         if (this.ram[io05_clock_ctrl] & 0x08) {
@@ -328,7 +370,7 @@ var Wqx = (function (){
         this.ram[io05_clock_ctrl] = value;
     };
     Wqx.prototype.write06LCDStartAddr = function (value){
-        console.log('write06LCDStartAddr: ' + value);
+//        console.log('write06LCDStartAddr: ' + value);
         this.lcdbuffaddr = ((this.ram[io0C_lcd_config] & 0x3) << 12) | (value << 4);
         this.ram[io06_lcd_config] = value;
         // SPDC1016
@@ -342,7 +384,7 @@ var Wqx = (function (){
         console.log('writePort1');
     };
     Wqx.prototype.write0AROABBS = function (value){
-        console.log('write0AROABBS: ' + value);
+//        console.log('write0AROABBS: ' + value);
         if (value !== this.ram[io0A_roa]) {
             // Update memory pointers only on value changed
             var bank;
@@ -371,12 +413,12 @@ var Wqx = (function (){
         //fixedram0000[io0A_roa] = value;
     };
     Wqx.prototype.writeTimer01Control = function (value){
-        console.log('writeTimer01Control: ' + value);
+//        console.log('writeTimer01Control: ' + value);
         this.lcdbuffaddr = ((value & 0x3) << 12) | (this.ram[io06_lcd_config] << 4);
         this.ram[io0C_lcd_config] = value;
     };
     Wqx.prototype.write0DVolumeIDLCDSegCtrl = function (value){
-        console.log('write0DVolumeIDLCDSegCtrl: ' + value);
+//        console.log('write0DVolumeIDLCDSegCtrl: ' + value);
         if (value ^ this.ram[io0D_volumeid] & 0x01) {
             // bit0 changed.
             // volume1,3 != volume0,2
@@ -405,7 +447,7 @@ var Wqx = (function (){
         this.ram[io0D_volumeid] = value;
     };
     Wqx.prototype.writeZeroPageBankswitch = function (value){
-        console.log('writeZeroPageBankswitch: ' + value);
+//        console.log('writeZeroPageBankswitch: ' + value);
         var oldzpbank = this.ram[io0F_zp_bsw] & 0x07;
         var newzpbank = (value & 0x07);
         var newzpptr = this.getZeroPagePointer(newzpbank);
@@ -459,14 +501,14 @@ var Wqx = (function (){
         }
     };
     Wqx.prototype.controlPort1 = function (value){
-        console.log('controlPort1: ' + value);
+//        console.log('controlPort1: ' + value);
         this.ram[io15_port1_dir] = value;
         this.updateKeypadRegisters();
     };
     Wqx.prototype.updateKeypadRegisters = function (){
     };
     Wqx.prototype.write20JG = function (value){
-        console.log('write20JG');
+//        console.log('write20JG');
     };
 
     Wqx.prototype.initCpu = function (){
@@ -511,7 +553,6 @@ var Wqx = (function (){
             for (var j=0; j<20; j++) {
                 var p = (160 * i + 8 * j) * 4;
                 var pixelsByte = lcdBuffer[20*i+j];
-                console.log(pixelsByte);
                 var pixel1 = (pixelsByte & 0x01) ? 255 : 0;
                 var pixel2 = (pixelsByte & 0x02) ? 255 : 0;
                 var pixel3 = (pixelsByte & 0x04) ? 255 : 0;
@@ -549,17 +590,59 @@ var Wqx = (function (){
         this.canvasCtx.putImageData(imageData, 0, 0);
     };
 
+    Wqx.prototype.checkTimebaseAndEnableIRQnEXIE1 = function (){
+        //if ( gFixedRAM0_04_general_ctrl & 0xF )
+        //{
+        //    // TimeBase Clock Select bit0~3
+        //    LOBYTE(gThreadFlags) = gThreadFlags | 0x10; // add 0x10 to gThreadFlags
+        //    gFixedRAM0[(unsigned __int8)io01_int_ctrl] |= 8u;// EXTERNAL INTERRUPT SELECT1
+        //}
+        if (this.ram[io04_general_ctrl] & 0x0F) {
+            this.shouldIrq = true;
+            this.ram[io01_int_enable] |= 0x08; // EXTERNAL INTERRUPT SELECT1
+        }
+    };
+
+    Wqx.prototype.turnoff2HzNMIMaskAddIRQFlag = function (){
+        if (this.ram[io04_general_ctrl] & 0x0F) {
+            this.shouldIrq = true;
+            // 2Hz NMI Mask off
+            this.ram[io01_int_enable] |= 0x10;
+        }
+    };
+
     Wqx.prototype.run = function (){
         this.initCpu();
+        clearInterval(this.frameTimer);
+        this.frameTimer = setInterval(this.frame.bind(this), 1000 / FrameRate);
+    };
+
+    Wqx.prototype.stop = function (){
+        clearInterval(this.frameTimer);
+    };
+
+    Wqx.prototype.frame = function (){
+        this.cpu.cycles = 0;
         do {
+            if (this.shouldNmi) {
+                this.cpu.nmi = 0;
+                this.shouldNmi = false;
+            } else if (this.shouldIrq) {
+                this.cpu.irq = 0;
+                this.shouldIrq = false;
+            }
             this.cpu.execute();
-        } while (this.cpu.cycles < 400000);
-//        this.cpu.nmi = 0;
-//        this.cpu.execute();
-////        this.cpu.nmi = 1;
-//        do {
-//            this.cpu.execute();
-//        } while (this.cpu.cycles < 1000000);
+        } while (this.cpu.cycles < CyclesPerFrame);
+        this.frameCounter++;
+        this.cpu.cycles -= CyclesPerFrame;
+        if (this.timer0started) {
+            this.shouldIrq = true;
+        }
+        if ((this.frameCounter % FrameRate) === NMIFrameIndex) {
+            this.shouldNmi = true;
+        }
+//        document.title = (this.frameCounter);
+        this.updateLCD();
     };
 
     return Wqx;
