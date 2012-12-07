@@ -53,6 +53,7 @@ M65C02Context.prototype.execute = function() {
                         if (this._code < 0x04) {
                             if (this._code < 0x02) {
                                 if (this._code < 0x01) {
+                                    this.reg_pc++;
                                     this.ram[this.reg_sp] = (this.reg_pc >> 8);
                                     this.reg_sp = --this.reg_sp & 0xFF | 0x100;
                                     this.ram[this.reg_sp] = (this.reg_pc & 0xFF);

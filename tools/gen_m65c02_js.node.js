@@ -293,7 +293,7 @@ var $INVALID1 = '';
 var $INVALID2 = 'this.reg_pc = (this.reg_pc + 1) & 0xFFFF;';
 var $INVALID3 = 'this.reg_pc = (this.reg_pc + 2) & 0xFFFF;';
 
-var $BRK = '' +
+var $BRK = 'this.reg_pc++;' +
     $PUSH('(this.reg_pc >> 8)') +
     $PUSH('(this.reg_pc & 0xFF)') +
     'this.flag_b = 1;' +
