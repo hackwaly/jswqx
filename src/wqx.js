@@ -90,6 +90,7 @@ var Wqx = (function (){
         this.shouldIrq = false;
         this.shouldNmi = false;
         this.frameTimer = null;
+        this.totalInsts = 0;
 
         this.lcdoffshift0flag = 0;
         this.lcdbuffaddr = 0;
@@ -154,7 +155,7 @@ var Wqx = (function (){
     };
     Wqx.prototype.fillC000BIOSBank = function (volume_array){
         this.bbsbankheader[0] = getByteArray(volume_array[0], 0, 0x2000);
-        if (this.ram[io0D_volumeid] & 1) {
+        if (this.ram[io0D_volumeid] & 0x01) {
             // Volume1,3
             this.bbsbankheader[1] = getByteArray(this.norbankheader[0], 0x2000, 0x2000);
         } else {
@@ -165,20 +166,20 @@ var Wqx = (function (){
         this.bbsbankheader[3] = getByteArray(volume_array[0], 0x6000, 0x2000);
         // 4567, 89AB, CDEF take first 4page 0000~7FFF in BROM
         for (var i = 0; i < 3; i++) {
-            this.bbsbankheader[i * 4 + 4] = getByteArray(volume_array[0], 0x8000 * (i + 1), 0x2000);
-            this.bbsbankheader[i * 4 + 5] = getByteArray(volume_array[0], 0x8000 * (i + 1) + 0x2000, 0x2000);
-            this.bbsbankheader[i * 4 + 6] = getByteArray(volume_array[0], 0x8000 * (i + 1) + 0x4000, 0x2000);
-            this.bbsbankheader[i * 4 + 7] = getByteArray(volume_array[0], 0x8000 * (i + 1) + 0x6000, 0x2000);
+            this.bbsbankheader[i * 4 + 4] = getByteArray(volume_array[i + 1], 0, 0x2000);
+            this.bbsbankheader[i * 4 + 5] = getByteArray(volume_array[i + 1], 0x2000, 0x2000);
+            this.bbsbankheader[i * 4 + 6] = getByteArray(volume_array[i + 1], 0x4000, 0x2000);
+            this.bbsbankheader[i * 4 + 7] = getByteArray(volume_array[i + 1], 0x6000, 0x2000);
         }
     };
     Wqx.prototype.switch4000ToBFFF = function (bank){
-        if (bank != 0 || this.ram[io0A_roa] & 0x80) {
+        if (bank !== 0 || (this.ram[io0A_roa] & 0x80)) {
             // bank != 0 || ROA == RAM
-            this.memmap[map4000] = getByteArray(this.may4000ptr, 0x2000);
-            this.memmap[map6000] = getByteArray(this.may4000ptr, 0x2000);
+            this.memmap[map4000] = getByteArray(this.may4000ptr, 0, 0x2000);
+            this.memmap[map6000] = getByteArray(this.may4000ptr, 0x2000, 0x2000);
         } else {
             // bank == 0 && ROA == ROM
-            if (this.ram[io0D_volumeid] & 0x1) {
+            if (this.ram[io0D_volumeid] & 0x01) {
                 // Volume1,3
                 // 4000~7FFF is 0 page of Nor.
                 // 8000~BFFF is relative to may4000ptr
@@ -323,7 +324,7 @@ var Wqx = (function (){
         this.ram[addr] = value;
     };
     Wqx.prototype.write00BankSwitch = function (bank){
-//        console.log('write00BankSwitch: ' + bank);
+        console.log('write00BankSwitch: ' + bank);
         if (this.ram[io0A_roa] & 0x80) {
             // ROA == 1
             // RAM (norflash?!)
@@ -384,7 +385,7 @@ var Wqx = (function (){
         console.log('writePort1');
     };
     Wqx.prototype.write0AROABBS = function (value){
-//        console.log('write0AROABBS: ' + value);
+        console.log('write0AROABBS: ' + value);
         if (value !== this.ram[io0A_roa]) {
             // Update memory pointers only on value changed
             var bank;
@@ -418,7 +419,7 @@ var Wqx = (function (){
         this.ram[io0C_lcd_config] = value;
     };
     Wqx.prototype.write0DVolumeIDLCDSegCtrl = function (value){
-//        console.log('write0DVolumeIDLCDSegCtrl: ' + value);
+        console.log('write0DVolumeIDLCDSegCtrl: ' + value);
         if (value ^ this.ram[io0D_volumeid] & 0x01) {
             // bit0 changed.
             // volume1,3 != volume0,2
@@ -447,7 +448,7 @@ var Wqx = (function (){
         this.ram[io0D_volumeid] = value;
     };
     Wqx.prototype.writeZeroPageBankswitch = function (value){
-//        console.log('writeZeroPageBankswitch: ' + value);
+        console.log('writeZeroPageBankswitch: ' + value);
         var oldzpbank = this.ram[io0F_zp_bsw] & 0x07;
         var newzpbank = (value & 0x07);
         var newzpptr = this.getZeroPagePointer(newzpbank);
@@ -469,7 +470,6 @@ var Wqx = (function (){
             }
         }
         this.ram[io0F_zp_bsw] = value;
-
     };
     Wqx.prototype.getZeroPagePointer = function (bank){
         //.text:0040BFD0 bank            = byte ptr  4
@@ -508,7 +508,7 @@ var Wqx = (function (){
     Wqx.prototype.updateKeypadRegisters = function (){
     };
     Wqx.prototype.write20JG = function (value){
-//        console.log('write20JG');
+        console.log('write20JG');
     };
 
     Wqx.prototype.initCpu = function (){
@@ -633,7 +633,22 @@ var Wqx = (function (){
                 this.shouldIrq = false;
                 console.log('irq');
             }
+            if (this.totalInsts === 123225) {
+                debugger;
+            }
             this.cpu.execute();
+            if (typeof DebugCpuRegsRecords !== 'undefined') {
+                var logRow = DebugCpuRegsRecords[this.totalInsts];
+                if (!(logRow.reg_a === this.cpu.reg_a &&
+                    logRow.reg_x === this.cpu.reg_x &&
+                    logRow.reg_y === this.cpu.reg_y &&
+                    logRow.reg_pc === this.cpu.reg_pc &&
+                    logRow.reg_sp === this.cpu.reg_sp &&
+                    logRow.reg_ps === this.cpu.get_reg_ps())) {
+                    debugger;
+                }
+            }
+            this.totalInsts++;
         } while (this.cpu.cycles < CyclesPerFrame);
         this.frameCounter++;
         this.cpu.cycles -= CyclesPerFrame;
