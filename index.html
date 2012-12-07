@@ -3,7 +3,7 @@
 <head>
     <title></title>
     <script src="src/m65c02.js"></script>
-    <script src="refs/logs.txt"></script>
+    <!--<script src="refs/logs.txt"></script>-->
     <script src="src/wqx.js"></script>
     <style>
         #wqx {
@@ -15,8 +15,8 @@
 </head>
 <body>
 <button id="load_demo" onclick="loadDemo();">loadDemo</button>
-<button id="run" onclick="wqx.run();" disabled>run</button>
-<button id="stop" onclick="wqx.stop();" disabled>stop</button>
+<button id="run" onclick="run();" disabled>run</button>
+<button id="stop" onclick="stop();" disabled>stop</button>
 <div id="wqx"></div>
 <script>
     var div = document.getElementById('wqx');
@@ -40,6 +40,16 @@
 
     var romLoaded = false;
     var norLoaded = false;
+    function run(){
+        wqx.run();
+        document.getElementById('run').setAttribute('disabled', 'disabled');
+        document.getElementById('stop').removeAttribute('disabled');
+    }
+    function stop(){
+        wqx.stop();
+        document.getElementById('stop').setAttribute('disabled', 'disabled');
+        document.getElementById('run').removeAttribute('disabled');
+    }
     function loadDemo(){
         // chrome allow local ajax: "--allow-file-access-from-files"
         // todo: progress info

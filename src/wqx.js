@@ -92,8 +92,18 @@ var Wqx = (function (){
         this.frameTimer = null;
         this.totalInsts = 0;
 
+        this.keypadmatrix = [
+            [0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0]
+        ];
         this.lcdoffshift0flag = 0;
-        this.lcdbuffaddr = 0;
+        this.lcdbuffaddr = null;
         this.timer0started = false;
         this.timer0value = 0;
 //        this.timer0waveoutstart = false;
@@ -152,7 +162,7 @@ var Wqx = (function (){
         this.may4000ptr = this.volume0array[0];
         this.memmap[mapE000] = getByteArray(this.volume0array[0], 0x2000, 0x2000);
         this.switch4000ToBFFF(0);
-        this._dbg_logMemmap();
+//        this._dbg_logMemmap();
     };
 
     function hex(num, len){
@@ -221,7 +231,7 @@ var Wqx = (function (){
         }
         this.memmap[map8000] = getByteArray(this.may4000ptr, 0x4000, 0x2000);
         this.memmap[mapA000] = getByteArray(this.may4000ptr, 0x6000, 0x2000);
-        this._dbg_logMemmap();
+//        this._dbg_logMemmap();
     };
 
     Wqx.prototype.initIo = function (){
@@ -258,9 +268,9 @@ var Wqx = (function (){
             case 0x07:
                 return this.read07StartTimer1();
             case 0x08:
-                return this.readPort0();
+                return this.read08Port0();
             case 0x09:
-                return this.readPort1();
+                return this.read09Port1();
             default:
                 return this.ram[addr];
         }
@@ -315,11 +325,15 @@ var Wqx = (function (){
     Wqx.prototype.read07StartTimer1 = function (){
         console.log('read06StopTimer1');
     };
-    Wqx.prototype.readPort0 = function (){
-        console.log('readPort0');
+    Wqx.prototype.read08Port0 = function (){
+//        console.log('readPort0');
+        this.updateKeypadRegisters();
+        return this.ram[io08_port0_data];
     };
-    Wqx.prototype.readPort1 = function (){
-        console.log('readPort1');
+    Wqx.prototype.read09Port1 = function (){
+//        console.log('readPort1');
+        this.updateKeypadRegisters();
+        return this.ram[io09_port1_data];
     };
     Wqx.prototype.writeIO = function (addr, value){
         switch (addr) {
@@ -332,9 +346,9 @@ var Wqx = (function (){
             case 0x06:
                 return this.write06LCDStartAddr(value);
             case 0x08:
-                return this.writePort0(value);
+                return this.write08Port0(value);
             case 0x09:
-                return this.writePort1(value);
+                return this.write09Port1(value);
             case 0x0A:
                 return this.write0AROABBS(value);
             case 0x0C:
@@ -352,7 +366,7 @@ var Wqx = (function (){
     };
 
     Wqx.prototype.write00BankSwitch = function (bank){
-        console.log('write00BankSwitch: ' + bank);
+//        console.log('write00BankSwitch: ' + bank);
         if (this.ram[io0A_roa] & 0x80) {
             // ROA == 1
             // RAM (norflash?!)
@@ -391,29 +405,152 @@ var Wqx = (function (){
         // SPDC1016
         if (this.ram[io05_clock_ctrl] & 0x08) {
             // old bit3, LCDON
-            if ((value & 0x0F) == 0) {
+            if ((value & 0x0F) === 0) {
                 // new bit0~bit3 is 0
-                this.lcdoffshift0flag = 1;
+                this.lcdoffshift0flag = true;
             }
         }
         this.ram[io05_clock_ctrl] = value;
     };
     Wqx.prototype.write06LCDStartAddr = function (value){
         console.log('write06LCDStartAddr: ' + value);
-        this.lcdbuffaddr = ((this.ram[io0C_lcd_config] & 0x3) << 12) | (value << 4);
+        if (this.lcdbuffaddr == null) {
+            this.lcdbuffaddr = ((this.ram[io0C_lcd_config] & 0x03) << 12) | (value << 4);
+            console.log('lcdAddr: ' + this.lcdbuffaddr);
+        }
         this.ram[io06_lcd_config] = value;
         // SPDC1016
         // don't know how wqxsim works.
         this.ram[io09_port1_data] &= 0xFE; // remove bit0 of port1 (keypad)
     };
-    Wqx.prototype.writePort0 = function (value){
-        console.log('writePort0');
+    Wqx.prototype.write08Port0 = function (value){
+//        console.log('write08Port0: ' + value);
+        this.ram[io08_port0_data] = value;
+        var row6data = 0;
+        var row7data = 0;
+        var xbit = 1;
+        for (var x = 0; x < 8; x++) {
+            if ((this.keypadmatrix[1][x] != 1)) {
+                row6data |= xbit;
+            }
+            if ((this.keypadmatrix[0][x] != 1)) {
+                row7data |= xbit;
+            }
+            xbit = xbit << 1;
+        }
+        // workaround?
+        if (row6data == 0xFF) {
+            row6data = 0;
+        }
+        if (row7data == 0xFF) {
+            row7data = 0;
+        }
+        if (row6data == value || value == 0 || row7data == 0xFB) {
+            // newvalue fit to some hotkey in row6
+            // or newvalue is 0 (all colume is 0)
+            // or row7 == FB (ON/OFF)
+            this.ram[io0B_lcd_ctrl] &= 0xFE; // Remove LCDIR1
+        } else {
+            this.ram[io0B_lcd_ctrl] |= 0x01; // Add LCDIR1 |= 0x1
+        }
+        this.updateKeypadRegisters();
     };
-    Wqx.prototype.writePort1 = function (value){
-        console.log('writePort1');
+    Wqx.prototype.write09Port1 = function (value){
+//        console.log('write09Port1: ' + value);
+        this.ram[io09_port1_data] = value;
+        var row6data = 0;
+        var row7data = 0;
+        var xbit = 1;
+        for (var x = 0; x < 8; x++) {
+            if ((this.keypadmatrix[1][x] != 1)) {
+                row6data |= xbit;
+            }
+            if ((this.keypadmatrix[0][x] != 1)) {
+                row7data |= xbit;
+            }
+            xbit = xbit << 1;
+        }
+        // workaround
+        if (row6data == 0xFF) {
+            row6data = 0;
+        }
+        if (row7data == 0xFF) {
+            row7data = 0;
+        }
+        var port0bit01 = this.ram[io08_port0_data] & 0x03;
+        if (value == 0) {
+            //case 0u:
+            //    // none of P10~P17 is set.
+            //    io0b_2 = io0B_port3;
+            //    port0bit01_ = gFixedRAM0[io08_port0_real] & 3;// 00 01 10 11
+            //    row6iszero = keypadmatrix1[6] == 0;     // no hotkey
+            //    row7data = keypadmatrix1[7];        // ON/OFF
+            //    gFixedRAM0[io0B_port3] = port0bit01_;// remove b2~b7
+            //    if ( !row6iszero || row7data )
+            //        // have hotkey, or have on/off
+            //        gFixedRAM0[io0b_2] = port0bit01_ ^ 3;// 00 -> 11 01 -> 10 10 -> 01 11 -> 00
+            //    if ( row7data == 0xFD )
+            //        // row7 is record/play
+            //        gFixedRAM0[io0b_2] &= 0xFEu;    // Remove LCDIR1
+            //    break;
+            this.ram[io0B_lcd_ctrl] = port0bit01; // remove b2~b7
+            if ((row6data != 0xFF) || (row7data != 0xFF)) {
+                // hotkey or on/off
+                this.ram[io0B_lcd_ctrl] = port0bit01 ^ 0x03; // remove b2~b7, reverse b0,b1
+            }
+            if (row7data == 0xFD) {
+                // record/play
+                this.ram[io0B_lcd_ctrl] &= 0xFE;
+            }
+        }
+        if ((value == 0xFD) || (value == 0xFE)) {
+            //case 0xFDu:
+            //case 0xFEu:
+            //    // ~P16 ~P17
+            //    io0b_1 = io0B_port3;
+            //    port0bit01 = gFixedRAM0[io08_port0_real] & 3;// 00 01 10 11
+            //    issame = keypadmatrix1[7] == tmpAXYValue;
+            //    gFixedRAM0[io0B_port3] = port0bit01;// remove b2~b7
+            //    if ( issame )
+            //        // row7 is same as [09]
+            //        gFixedRAM0[io0b_1] = port0bit01 ^ 3;// remove b2~b7, reverse b0,b1
+            //    break;
+            this.ram[io0B_lcd_ctrl] = port0bit01; // remove b2~b7
+            if (row7data == value) {
+                // row7 is same as [09]
+                this.ram[io0B_lcd_ctrl] = port0bit01 ^ 0x3; // remove b2~b7, reverse b0,b1
+            }
+        }
+        if (value == 0x03) {
+            //case 3u:
+            //    // both P11 P10, used for p00~p07 send and all 1, p10-p11 send and all 1
+            //    io0b = io0B_port3;
+            //    io08valuebit01 = gFixedRAM0[io08_port0_real] & 3;
+            //    gFixedRAM0[io0B_port3] = io08valuebit01;// remove b2~b7
+            //    if ( row7data_ == 0xFB )
+            //        gFixedRAM0[io0b] = io08valuebit01 ^ 3;// remove b2~b7, reverse b0,b1
+            //    goto LABEL_19;
+            this.ram[io0B_lcd_ctrl] = port0bit01; // remove b2~b7
+            if (row7data == 0xFB) {
+                // on/off
+                this.ram[io0B_lcd_ctrl] = port0bit01 ^ 0x3; // remove b2~b7, reverse b0,b1
+            }
+        }
+        // FIXME: 02, 01 Emulator rulz
+        if (value == 0x02) {
+            this.ram[io08_port0_data] = row6data;
+        }
+        if (value == 0x01) {
+            this.ram[io08_port0_data] = row7data;
+        }
+        if (((value != 0xFD) && (value != 0xFE) &&
+            (value != 0x00) && (value != 0x02) && (value != 0x01) && (value != 0x03)) ||
+            ((value == 0x03) && (this.ram[io15_port1_dir] == 0xFC))) {
+            this.updateKeypadRegisters();
+        }
     };
     Wqx.prototype.write0AROABBS = function (value){
-        console.log('write0AROABBS: ' + value);
+//        console.log('write0AROABBS: ' + value);
         if (value !== this.ram[io0A_roa]) {
             // Update memory pointers only on value changed
             var bank;
@@ -440,15 +577,18 @@ var Wqx = (function (){
         }
         // in simulator destination memory is updated before call WriteIO0A_ROA_BBS
         //fixedram0000[io0A_roa] = value;
-        this._dbg_logMemmap();
+//        this._dbg_logMemmap();
     };
     Wqx.prototype.writeTimer01Control = function (value){
-//        console.log('writeTimer01Control: ' + value);
-        this.lcdbuffaddr = ((value & 0x3) << 12) | (this.ram[io06_lcd_config] << 4);
+        console.log('writeTimer01Control: ' + value);
+        if (this.lcdbuffaddr === null) {
+            this.lcdbuffaddr = ((value & 0x03) << 12) | (this.ram[io06_lcd_config] << 4);
+            console.log('lcdAddr: ' + this.lcdbuffaddr);
+        }
         this.ram[io0C_lcd_config] = value;
     };
     Wqx.prototype.write0DVolumeIDLCDSegCtrl = function (value){
-        console.log('write0DVolumeIDLCDSegCtrl: ' + value);
+//        console.log('write0DVolumeIDLCDSegCtrl: ' + value);
         if (value ^ this.ram[io0D_volumeid] & 0x01) {
             // bit0 changed.
             // volume1,3 != volume0,2
@@ -475,10 +615,10 @@ var Wqx = (function (){
             this.switch4000ToBFFF(bank);
         }
         this.ram[io0D_volumeid] = value;
-        this._dbg_logMemmap();
+//        this._dbg_logMemmap();
     };
     Wqx.prototype.writeZeroPageBankswitch = function (value){
-        console.log('writeZeroPageBankswitch: ' + value);
+//        console.log('writeZeroPageBankswitch: ' + value);
         var oldzpbank = this.ram[io0F_zp_bsw] & 0x07;
         var newzpbank = (value & 0x07);
         var newzpptr = this.getZeroPagePointer(newzpbank);
@@ -536,6 +676,94 @@ var Wqx = (function (){
         this.updateKeypadRegisters();
     };
     Wqx.prototype.updateKeypadRegisters = function (){
+        // TODO: 2pass check
+        //qDebug("old [0015]:%02x [0009]:%02x [0008]:%02x", mem[0x15], mem[0x9], mem[0x8]);
+        //var up = 0, down = 0;
+        var port1control = this.ram[io15_port1_dir];
+        var port0control = this.ram[io0F_port0_dir] & 0xF0; // b4~b7
+        var port1controlbit = 1; // aka, y control bit
+        var tmpdest0 = 0;
+        var tmpdest1 = 0;
+        var port1data = this.ram[io09_port1_data];
+        var port0data = this.ram[io08_port0_data];
+        for (var y = 0; y < 8; y++) {
+            // y = Port10~Port17
+            var ysend = ((port1control & port1controlbit) != 0);
+            var xbit = 1;
+            for (var x = 0; x < 8; x++) {
+                // x = Port00~Port07
+                var port0controlbit;
+                if (x < 2) {
+                    // 0, 1 = b4 b5
+                    port0controlbit = xbit << 4;
+                } else if (x < 4) {
+                    // 2, 3 = b6
+                    port0controlbit = 0x40;
+                } else {
+                    // 4, 5, 6, 7 = b7
+                    port0controlbit = 0x80;
+                }
+                if (y < 2 && (port1data == 0x02 || port1data == 0x01)) {
+                    // Emulator rulz, only for port1 is single 0x02 0x01
+                    // TODO: invert when y < 2 (row 6,7)
+                    // 0,2 is both high
+                    if (ysend) {
+                        // port1y-> port0x
+                        // port1y is send but only set bit to high when port0 xbit is receive too
+                        if ((this.keypadmatrix[y][x] != 1) && ((port1data & port1controlbit) != 0) && ((port0control & port0controlbit) == 0)) {
+                            tmpdest0 |= xbit;
+                        }
+                    } else {
+                        // port0x -> port1y
+                        // port1y should be receive, only set bit to high when port0 xbit is send
+                        if ((this.keypadmatrix[y][x] != 1) && ((port0data & xbit) != 0) && ((port0control & port0controlbit) != 0)) {
+                            tmpdest1 |= xbit;
+                        }
+                    }
+                } else if (this.keypadmatrix[y][x] != 2) {
+                    if (ysend) {
+                        // port1y-> port0x
+                        // port1y is send but only set bit to high when port0 xbit is receive too
+                        if ((this.keypadmatrix[y][x]) && ((port1data & port1controlbit) != 0) && ((port0control & port0controlbit) == 0)) {
+                            tmpdest0 |= xbit;
+                        }
+                    } else {
+                        // port0x -> port1y
+                        // port1y should be receive, only set bit to high when port0 xbit is send
+                        if ((this.keypadmatrix[y][x]) && ((port0data & xbit) != 0) && ((port0control & port0controlbit) != 0)) {
+                            tmpdest1 |= xbit;
+                        }
+                    }
+                }
+                xbit = xbit << 1;
+            }
+            port1controlbit = port1controlbit << 1;
+        }
+        if (port1control != 0xFF) {
+            // port1 should clean some bits
+            // using port1control as port1mask
+            // sometimes port10,11 should clean here 
+            port1data &= port1control; // pre set receive bits to 0
+        }
+        if (port1control != 0xF0) {
+            // clean port0
+            // calculate port0 mask
+            // in most case port0 will be set to 0
+            var port0mask = (port0control >> 4) & 0x3; // bit4->0 bit5->1
+            if (port0control & 0x40) {
+                // bit6->2,3
+                port0mask |= 0x0C; // 00001100
+            }
+            if (port0control & 0x80) {
+                // bit7->4,5,6,7
+                port0mask |= 0xF0; // 11110000
+            }
+            port0data &= port0mask;
+        }
+        port0data |= tmpdest0;
+        port1data |= tmpdest1;
+        this.ram[io09_port1_data] = port1data;
+        this.ram[io08_port0_data] = port0data;
     };
     Wqx.prototype.write20JG = function (value){
         console.log('write20JG');
@@ -657,6 +885,7 @@ var Wqx = (function (){
     Wqx.prototype.run = function (){
         this.initCpu();
         clearInterval(this.frameTimer);
+        this.__deadlockCounter = 0;
         this.frameTimer = setInterval(this.frame.bind(this), 1000 / FrameRate);
     };
 
@@ -665,24 +894,43 @@ var Wqx = (function (){
     };
 
     Wqx.prototype.frame = function (){
+        var deadlockCounter = 0;
         this.cpu.cycles = 0;
         do {
+
+//            if (this.totalInsts === 594013) {
+//                debugger;
+//            }
+            if ((this.totalInsts & 0x7FFFF) === 0x7FFFF) {
+                this.shouldNmi = true;
+            }
             if (this.shouldNmi) {
                 this.cpu.nmi = 0;
                 this.shouldNmi = false;
+                this.__deadlockCounter--;
                 console.log('nmi');
-            } else if (this.shouldIrq) {
+            } else if (this.shouldIrq && !this.cpu.flag_i) {
                 this.cpu.irq = 0;
                 this.shouldIrq = false;
-                console.log('irq');
+                this.__deadlockCounter--;
+//                console.log('irq');
             }
-            if (this.totalInsts === 147745) {
-                debugger;
+            this.__deadlockCounter++;
+            if (this.__deadlockCounter === 3000) {
+                this.__deadlockCounter = 0;
+                if (this.ram[io04_general_ctrl] & 0x0F) {
+                    this.ram[io01_int_enable] |= 0x08;
+                    this.shouldIrq = true;
+                }
+                if (this.timer0started) {
+                    debugger;
+                    this.shouldIrq = true;
+                }
             }
             this.cpu.execute();
             if (typeof DebugCpuRegsRecords !== 'undefined' &&
-                this.totalInsts >= 123224) {
-                var logRow = DebugCpuRegsRecords[this.totalInsts-123224];
+                this.totalInsts >= 739999) {
+                var logRow = DebugCpuRegsRecords[this.totalInsts-739999];
                 if (!(logRow.reg_a === this.cpu.reg_a &&
                     logRow.reg_x === this.cpu.reg_x &&
                     logRow.reg_y === this.cpu.reg_y &&
@@ -696,12 +944,9 @@ var Wqx = (function (){
         } while (this.cpu.cycles < CyclesPerFrame);
         this.frameCounter++;
         this.cpu.cycles -= CyclesPerFrame;
-        if (this.timer0started) {
-            this.shouldIrq = true;
-        }
-        if ((this.frameCounter % FrameRate) === NMIFrameIndex) {
-            this.shouldNmi = true;
-        }
+//        if ((this.frameCounter % FrameRate) === NMIFrameIndex) {
+//            this.shouldNmi = true;
+//        }
         document.title = (this.frameCounter);
         this.updateLCD();
     };
