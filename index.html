@@ -14,6 +14,14 @@
     </style>
 </head>
 <body>
+<h1>文曲星模拟器</h1>
+<div>
+    <span>目前只在chrome浏览器测试过，别的浏览器应该也有能跑的。<br/>
+        由于ROM文件有16M之大，若加载过慢，请自行下载到硬盘上，拖拽到模拟器的屏幕区域手动加载。<br/>
+        若想要离线使用能正常加载，请在chrome启动参数中加入`--allow-file-access-from-files`。<br/>
+        <a href="./rom/obj.bin">ROM文件下载地址</a></span>
+</div>
+<div><span id="rom_progress">ROM尚未加载</span><span></span></div>
 <button id="load_demo" onclick="loadDemo();">loadDemo</button>
 <button id="run" onclick="run();" disabled>run</button>
 <button id="stop" onclick="stop();" disabled>stop</button>
@@ -21,25 +29,65 @@
 <script>
     var div = document.getElementById('wqx');
     var wqx = new Wqx(div);
-//    div.addEventListener('dragover', function (evt){
-//        evt.preventDefault();
-//    });
-//    div.addEventListener('drop', function (evt){
-//        var file;
-//        try {
-//            file = evt.dataTransfer.files[0];
-//        } catch(ex){}
-//        var fileReader = new FileReader();
-//        fileReader.addEventListener('loadend', function (evt){
-//            wqx.loadBROM(fileReader.result);
-//            wqx.run();
-//        });
-//        fileReader.readAsArrayBuffer(file);
-//        evt.preventDefault();
-//    });
 
     var romLoaded = false;
     var norLoaded = false;
+    var xhrRom = null;
+    function check(){
+        if (romLoaded && norLoaded) {
+            document.getElementById('run').removeAttribute('disabled');
+        }
+    }
+    div.addEventListener('dragover', function (evt){
+        evt.preventDefault();
+    });
+    div.addEventListener('drop', function (evt){
+        var file;
+        try {
+            file = evt.dataTransfer.files[0];
+        } catch(ex){}
+        var fileReader = new FileReader();
+        fileReader.addEventListener('loadend', function (evt){
+            if (!xhrRom) {
+                xhrRom.abort();
+                xhrRom = null;
+            }
+            wqx.loadBROM(fileReader.result);
+            romLoaded = true;
+            check();
+        });
+        fileReader.readAsArrayBuffer(file);
+        evt.preventDefault();
+    });
+
+    function loadDemo(){
+        var xhrNor = new XMLHttpRequest();
+        xhrNor.responseType = 'arraybuffer';
+        xhrNor.open('GET', './rom/cc800.fls', true);
+        xhrNor.addEventListener('loadend', function (){
+            wqx.loadNorFlash(xhrNor.response);
+            norLoaded = true;
+            check();
+        });
+        xhrNor.send();
+        // todo: progress info
+        document.getElementById('load_demo').setAttribute('disabled', 'disabled');
+        xhrRom = new XMLHttpRequest();
+        xhrRom.responseType = 'arraybuffer';
+        xhrRom.addEventListener('progress', function (evt){
+            document.getElementById('rom_progress').innerHTML = 'ROM加载中 ' + evt.loaded + '/' + evt.total;
+        });
+        xhrRom.addEventListener('loadend', function (){
+            document.getElementById('rom_progress').innerHTML = 'ROM加载完毕';
+            wqx.loadBROM(xhrRom.response);
+            romLoaded = true;
+            check();
+        });
+        xhrRom.open('GET', './rom/obj.bin', true);
+        xhrRom.send();
+
+    }
+
     function run(){
         wqx.run();
         document.getElementById('run').setAttribute('disabled', 'disabled');
@@ -50,35 +98,7 @@
         document.getElementById('stop').setAttribute('disabled', 'disabled');
         document.getElementById('run').removeAttribute('disabled');
     }
-    function loadDemo(){
-        // chrome allow local ajax: "--allow-file-access-from-files"
-        // todo: progress info
-        document.getElementById('load_demo').setAttribute('disabled', 'disabled');
-        function check(){
-            if (romLoaded && norLoaded) {
-                document.getElementById('run').removeAttribute('disabled');
-            }
-        }
-        var xhr1 = new XMLHttpRequest();
-        xhr1.responseType = 'arraybuffer';
-        xhr1.open('GET', './rom/obj.bin', true);
-        xhr1.addEventListener('loadend', function (){
-            wqx.loadBROM(xhr1.response);
-            romLoaded = true;
-            check();
-        });
-        xhr1.send();
 
-        var xhr2 = new XMLHttpRequest();
-        xhr2.responseType = 'arraybuffer';
-        xhr2.open('GET', './rom/cc800.fls', true);
-        xhr2.addEventListener('loadend', function (){
-            wqx.loadNorFlash(xhr2.response);
-            norLoaded = true;
-            check();
-        });
-        xhr2.send();
-    }
 </script>
 </body>
 </html>
