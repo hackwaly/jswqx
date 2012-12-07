@@ -152,7 +152,33 @@ var Wqx = (function (){
         this.may4000ptr = this.volume0array[0];
         this.memmap[mapE000] = getByteArray(this.volume0array[0], 0x2000, 0x2000);
         this.switch4000ToBFFF(0);
+        this._dbg_logMemmap();
     };
+
+    function hex(num, len){
+        var str = num.toString(16).toUpperCase();
+        return new Array(len - str.length + 1).join('0') + str;
+    }
+    var _dbg_mapNames = ['map0000','map2000','map4000','map6000','map8000','mapA000','mapC000','mapE000'];
+    Wqx.prototype._dbg_ptrName = function (i){
+        var ptr = this.memmap[i];
+        var mapName = _dbg_mapNames[i];
+        if (ptr.buffer === this.rom.buffer) {
+            return mapName + ': ROM[0x' + hex(ptr.byteOffset, 8) + ']';
+        } else if (ptr.buffer === this.nor.buffer) {
+            return mapName + ': NOR[0x' + hex(ptr.byteOffset, 8) + ']';
+        } else {
+            return mapName + ': RAM[0x' + hex(ptr.byteOffset, 8) + ']';
+        }
+    };
+    Wqx.prototype._dbg_logMemmap = function (){
+        var buff = [];
+        for (var i=0; i<_dbg_mapNames.length; i++) {
+            buff.push(this._dbg_ptrName(i));
+        }
+        console.log(buff.join('\n'));
+    };
+
     Wqx.prototype.fillC000BIOSBank = function (volume_array){
         this.bbsbankheader[0] = getByteArray(volume_array[0], 0, 0x2000);
         if (this.ram[io0D_volumeid] & 0x01) {
@@ -195,6 +221,7 @@ var Wqx = (function (){
         }
         this.memmap[map8000] = getByteArray(this.may4000ptr, 0x4000, 0x2000);
         this.memmap[mapA000] = getByteArray(this.may4000ptr, 0x6000, 0x2000);
+        this._dbg_logMemmap();
     };
 
     Wqx.prototype.initIo = function (){
@@ -323,6 +350,7 @@ var Wqx = (function (){
         }
         this.ram[addr] = value;
     };
+
     Wqx.prototype.write00BankSwitch = function (bank){
         console.log('write00BankSwitch: ' + bank);
         if (this.ram[io0A_roa] & 0x80) {
@@ -412,6 +440,7 @@ var Wqx = (function (){
         }
         // in simulator destination memory is updated before call WriteIO0A_ROA_BBS
         //fixedram0000[io0A_roa] = value;
+        this._dbg_logMemmap();
     };
     Wqx.prototype.writeTimer01Control = function (value){
 //        console.log('writeTimer01Control: ' + value);
@@ -446,6 +475,7 @@ var Wqx = (function (){
             this.switch4000ToBFFF(bank);
         }
         this.ram[io0D_volumeid] = value;
+        this._dbg_logMemmap();
     };
     Wqx.prototype.writeZeroPageBankswitch = function (value){
         console.log('writeZeroPageBankswitch: ' + value);
@@ -546,6 +576,19 @@ var Wqx = (function (){
         }
     };
 
+    Wqx.prototype.loadNorFlash = function (buffer){
+        var byteOffset = 0;
+        while (byteOffset < buffer.byteLength) {
+            var bufferSrc1 = getByteArray(buffer, byteOffset, 0x4000);
+            var bufferSrc2 = getByteArray(buffer, byteOffset + 0x4000, 0x4000);
+            var bufferDest1 = getByteArray(this.nor, byteOffset + 0x4000, 0x4000);
+            var bufferDest2 = getByteArray(this.nor, byteOffset, 0x4000);
+            memcpy(bufferDest1, bufferSrc1, 0x4000);
+            memcpy(bufferDest2, bufferSrc2, 0x4000);
+            byteOffset += 0x8000;
+        }
+    };
+
     Wqx.prototype.updateLCD = function (){
         var lcdBuffer = getByteArray(this.ram, this.lcdbuffaddr, 160*80/8);
         var imageData = this.canvasCtx.createImageData(160, 80);
@@ -633,7 +676,7 @@ var Wqx = (function (){
                 this.shouldIrq = false;
                 console.log('irq');
             }
-            if (this.totalInsts === 123225) {
+            if (this.totalInsts === 123289) {
                 debugger;
             }
             this.cpu.execute();

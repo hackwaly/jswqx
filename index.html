@@ -14,27 +14,61 @@
     </style>
 </head>
 <body>
-<button onclick="wqx.stop();">stop</button>
+<button id="load_demo" onclick="loadDemo();">loadDemo</button>
+<button id="run" onclick="wqx.run();" disabled>run</button>
+<button id="stop" onclick="wqx.stop();" disabled>stop</button>
 <div id="wqx"></div>
 <script>
     var div = document.getElementById('wqx');
     var wqx = new Wqx(div);
-    div.addEventListener('dragover', function (evt){
-        evt.preventDefault();
-    });
-    div.addEventListener('drop', function (evt){
-        var file;
-        try {
-            file = evt.dataTransfer.files[0];
-        } catch(ex){}
-        var fileReader = new FileReader();
-        fileReader.addEventListener('loadend', function (evt){
-            wqx.loadBROM(fileReader.result);
-            wqx.run();
+//    div.addEventListener('dragover', function (evt){
+//        evt.preventDefault();
+//    });
+//    div.addEventListener('drop', function (evt){
+//        var file;
+//        try {
+//            file = evt.dataTransfer.files[0];
+//        } catch(ex){}
+//        var fileReader = new FileReader();
+//        fileReader.addEventListener('loadend', function (evt){
+//            wqx.loadBROM(fileReader.result);
+//            wqx.run();
+//        });
+//        fileReader.readAsArrayBuffer(file);
+//        evt.preventDefault();
+//    });
+
+    var romLoaded = false;
+    var norLoaded = false;
+    function loadDemo(){
+        // chrome allow local ajax: "--allow-file-access-from-files"
+        // todo: progress info
+        document.getElementById('load_demo').setAttribute('disabled', 'disabled');
+        function check(){
+            if (romLoaded && norLoaded) {
+                document.getElementById('run').removeAttribute('disabled');
+            }
+        }
+        var xhr1 = new XMLHttpRequest();
+        xhr1.responseType = 'arraybuffer';
+        xhr1.open('GET', './rom/obj.bin', true);
+        xhr1.addEventListener('loadend', function (){
+            wqx.loadBROM(xhr1.response);
+            romLoaded = true;
+            check();
         });
-        fileReader.readAsArrayBuffer(file);
-        evt.preventDefault();
-    });
+        xhr1.send();
+
+        var xhr2 = new XMLHttpRequest();
+        xhr2.responseType = 'arraybuffer';
+        xhr2.open('GET', './rom/cc800.fls', true);
+        xhr2.addEventListener('loadend', function (){
+            wqx.loadNorFlash(xhr2.response);
+            norLoaded = true;
+            check();
+        });
+        xhr2.send();
+    }
 </script>
 </body>
 </html>
