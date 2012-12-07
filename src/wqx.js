@@ -242,7 +242,6 @@ var Wqx = (function (){
         return this.ram[io00_bank_switch];
     };
     Wqx.prototype.read04StopTimer0 = function (){
-        console.log('read04StopTimer0');
         if (this.timer0started) {
             this.timer0value = this.read02Timer0Value();
             this.timer0started = false;
@@ -250,19 +249,19 @@ var Wqx = (function (){
 //        if (this.timer0waveoutstart) {
 //            this.timer0waveoutstart = false;
 //        }
+        console.log('read04StopTimer0: ' + this.ram[io04_general_ctrl]);
         return this.ram[io04_general_ctrl];
     };
     Wqx.prototype.getCpuCycles = function (){
         return (this.frameCounter * CyclesPerFrame) + this.cpu.cycles;
     };
     Wqx.prototype.read02Timer0Value = function (){
-        console.log('read02Timer0Value');
         if (this.timer0started) {
-            return Math.floor((this.getCpuCycles() - this.timer0startcycles) /
+            this.timer0value = Math.floor((this.getCpuCycles() - this.timer0startcycles) /
                 SPDC1016Frequency) & 0xFF;
-        } else {
-            return this.timer0value;
         }
+        console.log('read02Timer0Value: ' + this.timer0value);
+        return this.timer0value;
     };
     Wqx.prototype.read05StartTimer0 = function (){
         console.log('read05StartTimer0');
@@ -282,7 +281,8 @@ var Wqx = (function (){
     };
     Wqx.prototype.read06StopTimer1 = function (){
         console.log('read06StopTimer1');
-
+        //todo
+        return this.ram[io06_lcd_config];
     };
     Wqx.prototype.read07StartTimer1 = function (){
         console.log('read06StopTimer1');
@@ -319,10 +319,8 @@ var Wqx = (function (){
                 return this.controlPort1(value);
             case 0x20:
                 return this.write20JG(value);
-            default:
-                this.ram[addr] = value;
-                break;
         }
+        this.ram[addr] = value;
     };
     Wqx.prototype.write00BankSwitch = function (bank){
 //        console.log('write00BankSwitch: ' + bank);
@@ -359,7 +357,7 @@ var Wqx = (function (){
         }
     };
     Wqx.prototype.write05ClockCtrl = function (value){
-//        console.log('write05ClockCtrl: ' + value);
+        console.log('write05ClockCtrl: ' + value);
         // FROM WQXSIM
         // SPDC1016
         if (this.ram[io05_clock_ctrl] & 0x08) {
@@ -372,7 +370,7 @@ var Wqx = (function (){
         this.ram[io05_clock_ctrl] = value;
     };
     Wqx.prototype.write06LCDStartAddr = function (value){
-//        console.log('write06LCDStartAddr: ' + value);
+        console.log('write06LCDStartAddr: ' + value);
         this.lcdbuffaddr = ((this.ram[io0C_lcd_config] & 0x3) << 12) | (value << 4);
         this.ram[io06_lcd_config] = value;
         // SPDC1016
@@ -629,9 +627,11 @@ var Wqx = (function (){
             if (this.shouldNmi) {
                 this.cpu.nmi = 0;
                 this.shouldNmi = false;
+                console.log('nmi');
             } else if (this.shouldIrq) {
                 this.cpu.irq = 0;
                 this.shouldIrq = false;
+                console.log('irq');
             }
             this.cpu.execute();
         } while (this.cpu.cycles < CyclesPerFrame);
