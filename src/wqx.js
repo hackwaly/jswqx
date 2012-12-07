@@ -824,38 +824,14 @@ var Wqx = (function (){
             for (var j=0; j<20; j++) {
                 var p = (160 * i + 8 * j) * 4;
                 var pixelsByte = lcdBuffer[20*i+j];
-                var pixel1 = (pixelsByte & 0x01) ? 255 : 0;
-                var pixel2 = (pixelsByte & 0x02) ? 255 : 0;
-                var pixel3 = (pixelsByte & 0x04) ? 255 : 0;
-                var pixel4 = (pixelsByte & 0x08) ? 255 : 0;
-                var pixel5 = (pixelsByte & 0x10) ? 255 : 0;
-                var pixel6 = (pixelsByte & 0x20) ? 255 : 0;
-                var pixel7 = (pixelsByte & 0x40) ? 255 : 0;
-                var pixel8 = (pixelsByte & 0x80) ? 255 : 0;
-                imageData.data[p+0] = pixel1;
-                imageData.data[p+1] = pixel1;
-                imageData.data[p+2] = pixel1;
-                imageData.data[p+4] = pixel2;
-                imageData.data[p+5] = pixel2;
-                imageData.data[p+6] = pixel2;
-                imageData.data[p+8] = pixel3;
-                imageData.data[p+9] = pixel3;
-                imageData.data[p+10] = pixel3;
-                imageData.data[p+12] = pixel4;
-                imageData.data[p+13] = pixel4;
-                imageData.data[p+14] = pixel4;
-                imageData.data[p+16] = pixel5;
-                imageData.data[p+17] = pixel5;
-                imageData.data[p+18] = pixel5;
-                imageData.data[p+20] = pixel6;
-                imageData.data[p+21] = pixel6;
-                imageData.data[p+22] = pixel6;
-                imageData.data[p+24] = pixel7;
-                imageData.data[p+25] = pixel7;
-                imageData.data[p+26] = pixel7;
-                imageData.data[p+28] = pixel8;
-                imageData.data[p+29] = pixel8;
-                imageData.data[p+30] = pixel8;
+                imageData.data[p+3] = (pixelsByte & 0x80) ? 255 : 0;
+                imageData.data[p+7] = (pixelsByte & 0x40) ? 255 : 0;
+                imageData.data[p+11] = (pixelsByte & 0x20) ? 255 : 0;
+                imageData.data[p+15] = (pixelsByte & 0x10) ? 255 : 0;
+                imageData.data[p+19] = (pixelsByte & 0x08) ? 255 : 0;
+                imageData.data[p+23] = (pixelsByte & 0x04) ? 255 : 0;
+                imageData.data[p+27] = (pixelsByte & 0x02) ? 255 : 0;
+                imageData.data[p+31] = (pixelsByte & 0x01) ? 255 : 0;
             }
         }
         this.canvasCtx.putImageData(imageData, 0, 0);
@@ -885,7 +861,6 @@ var Wqx = (function (){
     Wqx.prototype.run = function (){
         this.initCpu();
         clearInterval(this.frameTimer);
-        this.__deadlockCounter = 0;
         this.frameTimer = setInterval(this.frame.bind(this), 1000 / FrameRate);
     };
 
@@ -897,56 +872,28 @@ var Wqx = (function (){
         var deadlockCounter = 0;
         this.cpu.cycles = 0;
         do {
-
-//            if (this.totalInsts === 594013) {
-//                debugger;
-//            }
-            if ((this.totalInsts & 0x7FFFF) === 0x7FFFF) {
-                this.shouldNmi = true;
-            }
             if (this.shouldNmi) {
                 this.cpu.nmi = 0;
                 this.shouldNmi = false;
-                this.__deadlockCounter--;
-                console.log('nmi');
             } else if (this.shouldIrq && !this.cpu.flag_i) {
                 this.cpu.irq = 0;
                 this.shouldIrq = false;
-                this.__deadlockCounter--;
-//                console.log('irq');
-            }
-            this.__deadlockCounter++;
-            if (this.__deadlockCounter === 3000) {
-                this.__deadlockCounter = 0;
-                if (this.ram[io04_general_ctrl] & 0x0F) {
-                    this.ram[io01_int_enable] |= 0x08;
-                    this.shouldIrq = true;
-                }
-                if (this.timer0started) {
-                    debugger;
-                    this.shouldIrq = true;
-                }
             }
             this.cpu.execute();
-            if (typeof DebugCpuRegsRecords !== 'undefined' &&
-                this.totalInsts >= 739999) {
-                var logRow = DebugCpuRegsRecords[this.totalInsts-739999];
-                if (!(logRow.reg_a === this.cpu.reg_a &&
-                    logRow.reg_x === this.cpu.reg_x &&
-                    logRow.reg_y === this.cpu.reg_y &&
-                    logRow.reg_pc === this.cpu.reg_pc &&
-                    logRow.reg_sp === this.cpu.reg_sp &&
-                    logRow.reg_ps === this.cpu.get_reg_ps())) {
-                    debugger;
-                }
-            }
             this.totalInsts++;
         } while (this.cpu.cycles < CyclesPerFrame);
         this.frameCounter++;
         this.cpu.cycles -= CyclesPerFrame;
-//        if ((this.frameCounter % FrameRate) === NMIFrameIndex) {
-//            this.shouldNmi = true;
-//        }
+        if ((this.frameCounter % FrameRate) === NMIFrameIndex) {
+            this.shouldNmi = true;
+        }
+        if (this.ram[io04_general_ctrl] & 0x0F) {
+            this.ram[io01_int_enable] |= 0x08;
+            this.shouldIrq = true;
+        }
+        if (this.timer0started) {
+            this.shouldIrq = true;
+        }
         document.title = (this.frameCounter);
         this.updateLCD();
     };
