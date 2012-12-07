@@ -676,7 +676,7 @@ var Wqx = (function (){
                 this.shouldIrq = false;
                 console.log('irq');
             }
-            if (this.totalInsts === 123289) {
+            if (this.totalInsts === 147745) {
                 debugger;
             }
             this.cpu.execute();

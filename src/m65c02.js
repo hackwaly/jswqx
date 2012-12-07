@@ -419,9 +419,13 @@ M65C02Context.prototype.execute = function() {
                                     this.reg_pc = (this.reg_pc + 1) & 0xFFFF;
                                     this._tmp1 = ((this.io_map[this._addr] ? this.io_read(this._addr) : this.memmap[this._addr >> 13][this._addr & 0x1FFF]) << 1) | this.flag_c;
                                     this.flag_c = (this._tmp1 > 0xFF) ? 1 : 0;
-                                    this.reg_a = (this._tmp1 & 0xFF);
-                                    this.flag_n = (this.reg_a & 0x80) >> 7;
-                                    this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
+                                    this.flag_n = (this._tmp1 & 0x80) >> 7;
+                                    this.flag_z = (this._tmp1 & 0xFF) ? 0 : 1;
+                                    if (this.io_map[this._addr]) {
+                                        this.io_write(this._addr, (this._tmp1 & 0xFF));
+                                    } else {
+                                        this.memmap[this._addr >> 13][this._addr & 0x1FFF] = (this._tmp1 & 0xFF);
+                                    }
                                     this.cycles += 5;
                                 } else {
                                     this._addr = this.memmap[this.reg_pc >> 13][this.reg_pc & 0x1FFF];
@@ -488,9 +492,13 @@ M65C02Context.prototype.execute = function() {
                                     this.reg_pc = (this.reg_pc + 2) & 0xFFFF;
                                     this._tmp1 = ((this.io_map[this._addr] ? this.io_read(this._addr) : this.memmap[this._addr >> 13][this._addr & 0x1FFF]) << 1) | this.flag_c;
                                     this.flag_c = (this._tmp1 > 0xFF) ? 1 : 0;
-                                    this.reg_a = (this._tmp1 & 0xFF);
-                                    this.flag_n = (this.reg_a & 0x80) >> 7;
-                                    this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
+                                    this.flag_n = (this._tmp1 & 0x80) >> 7;
+                                    this.flag_z = (this._tmp1 & 0xFF) ? 0 : 1;
+                                    if (this.io_map[this._addr]) {
+                                        this.io_write(this._addr, (this._tmp1 & 0xFF));
+                                    } else {
+                                        this.memmap[this._addr >> 13][this._addr & 0x1FFF] = (this._tmp1 & 0xFF);
+                                    }
                                     this.cycles += 6;
                                 } else {
                                     this._addr = this.memmap[this.reg_pc >> 13][this.reg_pc & 0x1FFF];
@@ -563,9 +571,13 @@ M65C02Context.prototype.execute = function() {
                                     this.reg_pc = (this.reg_pc + 1) & 0xFFFF;
                                     this._tmp1 = ((this.io_map[this._addr] ? this.io_read(this._addr) : this.memmap[this._addr >> 13][this._addr & 0x1FFF]) << 1) | this.flag_c;
                                     this.flag_c = (this._tmp1 > 0xFF) ? 1 : 0;
-                                    this.reg_a = (this._tmp1 & 0xFF);
-                                    this.flag_n = (this.reg_a & 0x80) >> 7;
-                                    this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
+                                    this.flag_n = (this._tmp1 & 0x80) >> 7;
+                                    this.flag_z = (this._tmp1 & 0xFF) ? 0 : 1;
+                                    if (this.io_map[this._addr]) {
+                                        this.io_write(this._addr, (this._tmp1 & 0xFF));
+                                    } else {
+                                        this.memmap[this._addr >> 13][this._addr & 0x1FFF] = (this._tmp1 & 0xFF);
+                                    }
                                     this.cycles += 6;
                                 } else {
                                     this._addr = this.memmap[this.reg_pc >> 13][this.reg_pc & 0x1FFF];
@@ -630,9 +642,13 @@ M65C02Context.prototype.execute = function() {
                                     this.reg_pc = (this.reg_pc + 2) & 0xFFFF;
                                     this._tmp1 = ((this.io_map[this._addr] ? this.io_read(this._addr) : this.memmap[this._addr >> 13][this._addr & 0x1FFF]) << 1) | this.flag_c;
                                     this.flag_c = (this._tmp1 > 0xFF) ? 1 : 0;
-                                    this.reg_a = (this._tmp1 & 0xFF);
-                                    this.flag_n = (this.reg_a & 0x80) >> 7;
-                                    this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
+                                    this.flag_n = (this._tmp1 & 0x80) >> 7;
+                                    this.flag_z = (this._tmp1 & 0xFF) ? 0 : 1;
+                                    if (this.io_map[this._addr]) {
+                                        this.io_write(this._addr, (this._tmp1 & 0xFF));
+                                    } else {
+                                        this.memmap[this._addr >> 13][this._addr & 0x1FFF] = (this._tmp1 & 0xFF);
+                                    }
                                     this.cycles += 6;
                                 } else {
                                     this._addr = this.memmap[this.reg_pc >> 13][this.reg_pc & 0x1FFF];
@@ -961,7 +977,7 @@ M65C02Context.prototype.execute = function() {
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
-                                        this.flag_v = ((this.reg_a ^ this._tmp1) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
+                                        this.flag_v = ((this.reg_a ^ this._tmp1 ^ 0x80) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
                                         this.reg_a = (this._tmp2 & 0xFF);
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
@@ -1001,7 +1017,7 @@ M65C02Context.prototype.execute = function() {
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
-                                        this.flag_v = ((this.reg_a ^ this._tmp1) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
+                                        this.flag_v = ((this.reg_a ^ this._tmp1 ^ 0x80) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
                                         this.reg_a = (this._tmp2 & 0xFF);
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
@@ -1060,7 +1076,7 @@ M65C02Context.prototype.execute = function() {
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
-                                        this.flag_v = ((this.reg_a ^ this._tmp1) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
+                                        this.flag_v = ((this.reg_a ^ this._tmp1 ^ 0x80) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
                                         this.reg_a = (this._tmp2 & 0xFF);
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
@@ -1101,7 +1117,7 @@ M65C02Context.prototype.execute = function() {
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
-                                        this.flag_v = ((this.reg_a ^ this._tmp1) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
+                                        this.flag_v = ((this.reg_a ^ this._tmp1 ^ 0x80) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
                                         this.reg_a = (this._tmp2 & 0xFF);
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
@@ -1163,7 +1179,7 @@ M65C02Context.prototype.execute = function() {
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
-                                        this.flag_v = ((this.reg_a ^ this._tmp1) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
+                                        this.flag_v = ((this.reg_a ^ this._tmp1 ^ 0x80) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
                                         this.reg_a = (this._tmp2 & 0xFF);
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
@@ -1186,7 +1202,7 @@ M65C02Context.prototype.execute = function() {
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
-                                        this.flag_v = ((this.reg_a ^ this._tmp1) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
+                                        this.flag_v = ((this.reg_a ^ this._tmp1 ^ 0x80) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
                                         this.reg_a = (this._tmp2 & 0xFF);
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
@@ -1221,7 +1237,7 @@ M65C02Context.prototype.execute = function() {
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
-                                        this.flag_v = ((this.reg_a ^ this._tmp1) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
+                                        this.flag_v = ((this.reg_a ^ this._tmp1 ^ 0x80) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
                                         this.reg_a = (this._tmp2 & 0xFF);
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
@@ -1278,7 +1294,7 @@ M65C02Context.prototype.execute = function() {
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
-                                        this.flag_v = ((this.reg_a ^ this._tmp1) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
+                                        this.flag_v = ((this.reg_a ^ this._tmp1 ^ 0x80) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
                                         this.reg_a = (this._tmp2 & 0xFF);
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
@@ -1317,7 +1333,7 @@ M65C02Context.prototype.execute = function() {
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
-                                        this.flag_v = ((this.reg_a ^ this._tmp1) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
+                                        this.flag_v = ((this.reg_a ^ this._tmp1 ^ 0x80) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;
                                         this.reg_a = (this._tmp2 & 0xFF);
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;

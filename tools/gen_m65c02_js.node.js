@@ -87,7 +87,7 @@ var $ADC = 'this._tmp1 = ' + $READ + ';' +
     '} else {' +
         'this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;' +
         'this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;' +
-        'this.flag_v = ((this.reg_a ^ this._tmp1) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;' +
+        'this.flag_v = ((this.reg_a ^ this._tmp1 ^ 0x80) & (this.reg_a ^ this._tmp2) & 0x80) >> 7;' +
         'this.reg_a = (this._tmp2 & 0xFF);' +
         $SETNZ('this.reg_a') +
     '}';
@@ -129,8 +129,8 @@ var $LSRA = 'this.flag_c = (this.reg_a & 0x01);' +
     $SETNZ('this.reg_a');
 var $ROL = 'this._tmp1 = (' + $READ + ' << 1) | this.flag_c;' +
     'this.flag_c = (this._tmp1 > 0xFF) ? 1 : 0;' +
-    'this.reg_a = (this._tmp1 & 0xFF);' +
-    $SETNZ('this.reg_a');
+    $SETNZ('this._tmp1') +
+    $WRITE('(this._tmp1 & 0xFF)');
 var $ROLA = 'this._tmp1 = (this.reg_a << 1) | this.flag_c;' +
     'this.flag_c = (this._tmp1 > 0xFF) ? 1 : 0;' +
     'this.reg_a = (this._tmp1 & 0xFF);' +
