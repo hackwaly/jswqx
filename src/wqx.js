@@ -258,7 +258,7 @@ var Wqx = (function (){
     Wqx.prototype.read02Timer0Value = function (){
         console.log('read02Timer0Value');
         if (this.timer0started) {
-            this.timer0value = Math.floor((this.getCpuCycles() - this.timer0startcycles) /
+            return Math.floor((this.getCpuCycles() - this.timer0startcycles) /
                 SPDC1016Frequency) & 0xFF;
         } else {
             return this.timer0value;
