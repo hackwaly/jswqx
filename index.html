@@ -6,6 +6,7 @@
     <script src="src/m65c02.js"></script>
     <!--<script src="refs/logs.txt"></script>-->
     <script src="src/wqx.js"></script>
+    <script src="src/keypad.js"></script>
     <style>
         #wqx {
             width: 640px;
@@ -27,10 +28,12 @@
 <button id="load_demo" onclick="loadDemo();">loadDemo</button>
 <button id="run" onclick="run();" disabled>run</button>
 <button id="stop" onclick="stop();" disabled>stop</button>
+<label><input tabindex="0" id="input" type="text" placeholder="键盘输入"/></label>
 <div id="wqx"></div>
 <script>
     var div = document.getElementById('wqx');
     var wqx = new Wqx(div);
+    var keypad = new WqxKeypad(wqx, document.getElementById('input'));
 
     var romLoaded = false;
     var norLoaded = false;
