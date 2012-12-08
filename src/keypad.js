@@ -48,7 +48,7 @@ var WqxKeypad = function (){
         33: 'PageUp',
         38: 'Up',
         34: 'PageDown',
-        17: 'Control',
+        9: 'Tab',
         229: 'Shift',
         20: 'CapsLock',
         27: 'Esc',
@@ -70,7 +70,7 @@ var WqxKeypad = function (){
         'F10': 0x0D,
         'F11': 0x0E,
 
-        'Control': 0x10, // 50 help
+        'Tab': 0x10, // 50 help
         'Shift': 0x11, // 51 Shift
         'CapsLock': 0x12, // 52 CapsLock
         'Esc': 0x13, // 53 AC
