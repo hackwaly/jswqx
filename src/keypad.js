@@ -59,75 +59,82 @@ var WqxKeypad = function (){
         40: 'Down',
         39: 'Right'
     };
-    var keyNameToWqxKeyCode = {
-        'F5': 0,
-        'F6': 1,
-        'F7': 2,
-        'F8': 3,
-        'F9': 4,
-        'F10': 5,
-        'F11': 6,
-        'F1': 12,
-        'F2': 13,
-        'F3': 14,
-        'F4': 15,
-        'F12': 18,
-        'Q': 20,
-        'W': 21,
-        'E': 22,
-        'R': 23,
-        'T': 24,
-        'Y': 25,
-        'U': 26,
-        'I': 27,
-        'O': 28,
-        'P': 29,
-        'A': 30,
-        'S': 31,
-        'D': 32,
-        'F': 33,
-        'G': 34,
-        'H': 35,
-        'J': 36,
-        'K': 37,
-        'L': 38,
-        'Enter': 39,
-        'Z': 40,
-        'X': 41,
-        'C': 42,
-        'V': 43,
-        'B': 44,
-        'N': 45,
-        'M': 46,
-        'PageUp': 47,
-        'Up': 48,
-        'PageDown': 49,
-        'Control': 50,
-        'Shift': 51,
-        'CapsLock': 52,
-        'Esc': 53,
-        '0': 54,
-        'Period': 55,
-        'Equals': 56,
-        'Left': 57,
-        'Down': 58,
-        'Right': 59
+    var keyNameToKeypadMatrixIndex = {
+        'F12': 0x02,
+
+        'F5': 0x08,
+        'F6': 0x09,
+        'F7': 0x0A,
+        'F8': 0x0B,
+        'F9': 0x0C,
+        'F10': 0x0D,
+        'F11': 0x0E,
+
+        'Control': 0x10, // 50 help
+        'Shift': 0x11, // 51 Shift
+        'CapsLock': 0x12, // 52 CapsLock
+        'Esc': 0x13, // 53 AC
+        '0': 0x14, // 54 0
+        'Period': 0x15, // 55 .
+        'Equals': 0x16, // 56 =
+        'Left': 0x17, // 57 `<-`
+
+        'Z': 0x18, // 40 Z
+        'X': 0x19, // 41 X
+        'C': 0x1A, // 42 C
+        'V': 0x1B, // 43 V
+        'B': 0x1C, // 44 B
+        'N': 0x1D, // 46 N
+        'M': 0x1E, // 46 M
+        'PageUp': 0x1F, // 47 PgUp
+
+        'A': 0x20, // 30 A
+        'S': 0x21, // 31 S
+        'D': 0x22, // 32 D
+        'F': 0x23, // 33 F
+        'G': 0x24, // 34 G
+        'H': 0x25, // 35 H
+        'J': 0x26, // 36 J
+        'K': 0x27, // 37 K
+
+        'Q': 0x28, // 20 Q
+        'W': 0x29, // 21 W
+        'E': 0x2A, // 22 E
+        'R': 0x2B, // 23 R
+        'T': 0x2C, // 24 T
+        'Y': 0x2D, // 25 Y
+        'U': 0x2E, // 26 U
+        'I': 0x2F, // 27 I
+
+        'O': 0x30, // 28 O
+        'L': 0x31, // 38 L
+        'Up': 0x32, // 48 `^`
+        'Down': 0x33, // 58 `v`
+        'P': 0x34, // 29 P
+        'Enter': 0x35, // 39 Enter
+        'PageDown': 0x36, // 49 PgDown
+        'Right': 0x37, // 59 `->`
+
+        'F1': 0x3A, // 12 F1
+        'F2': 0x3B, // 13 F2
+        'F3': 0x3C, // 14 F3
+        'F4': 0x3D // 15 F4
     };
 
     WqxKeypad.prototype.handleKeyDown = function (evt){
-        var wqxKeyCode = keyNameToWqxKeyCode[keyCodeToKeyName[evt.keyCode]];
+        var wqxKeyCode = keyNameToKeypadMatrixIndex[keyCodeToKeyName[evt.keyCode]];
         if (wqxKeyCode) {
-            var row = Math.floor(wqxKeyCode / 10);
-            var col = wqxKeyCode % 10;
+            var row = wqxKeyCode >> 3;
+            var col = wqxKeyCode & 0x07;
             this.wqx.keypadmatrix[row][col] = 1;
         }
         evt.preventDefault();
     };
     WqxKeypad.prototype.handleKeyUp = function (evt){
-        var wqxKeyCode = keyNameToWqxKeyCode[keyCodeToKeyName[evt.keyCode]];
+        var wqxKeyCode = keyNameToKeypadMatrixIndex[keyCodeToKeyName[evt.keyCode]];
         if (wqxKeyCode) {
-            var row = Math.floor(wqxKeyCode / 10);
-            var col = wqxKeyCode % 10;
+            var row = wqxKeyCode >> 3;
+            var col = wqxKeyCode & 0x07;
             this.wqx.keypadmatrix[row][col] = 0;
         }
         evt.preventDefault();
