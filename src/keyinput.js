@@ -1,8 +1,8 @@
-var WqxKeypad = function (){
-    function WqxKeypad(wqx, input){
+var WqxKeyInput = function (){
+    function WqxKeyInput(wqx, input){
         this.wqx = wqx;
-        input.addEventListener('keydown', this.handleKeyDown.bind(this));
-        input.addEventListener('keyup', this.handleKeyUp.bind(this));
+        input.addEventListener('keydown', this.handleKeyDown.bind(this), false);
+        input.addEventListener('keyup', this.handleKeyUp.bind(this), false);
     }
 
     var keyCodeToKeyName = {
@@ -120,24 +120,31 @@ var WqxKeypad = function (){
         'F3': 0x3C, // 14 F3
         'F4': 0x3D // 15 F4
     };
-
-    WqxKeypad.prototype.handleKeyDown = function (evt){
-        var wqxKeyCode = keyNameToKeypadMatrixIndex[keyCodeToKeyName[evt.keyCode]];
+    WqxKeyInput.prototype._keyDownOrUp = function (key, downOrUp){
+        var wqxKeyCode = keyNameToKeypadMatrixIndex[key];
         if (wqxKeyCode) {
             var row = wqxKeyCode >> 3;
             var col = wqxKeyCode & 0x07;
-            this.wqx.keypadmatrix[row][col] = 1;
+            this.wqx.keypadmatrix[row][col] = downOrUp ? 1 : 0;
         }
+    };
+    WqxKeyInput.prototype.keyDown = function (key){
+        this._keyDownOrUp(key, true);
+        this.onpress(key);
+    };
+    WqxKeyInput.prototype.keyUp = function (key){
+        this._keyDownOrUp(key, false);
+        this.onrelease(key);
+    };
+    WqxKeyInput.prototype.handleKeyDown = function (evt){
+        this.keyDown(keyCodeToKeyName[evt.keyCode]);
         evt.preventDefault();
     };
-    WqxKeypad.prototype.handleKeyUp = function (evt){
-        var wqxKeyCode = keyNameToKeypadMatrixIndex[keyCodeToKeyName[evt.keyCode]];
-        if (wqxKeyCode) {
-            var row = wqxKeyCode >> 3;
-            var col = wqxKeyCode & 0x07;
-            this.wqx.keypadmatrix[row][col] = 0;
-        }
+    WqxKeyInput.prototype.handleKeyUp = function (evt){
+        this.keyUp(keyCodeToKeyName[evt.keyCode]);
         evt.preventDefault();
     };
-    return WqxKeypad;
+    WqxKeyInput.prototype.onpress = function (key){};
+    WqxKeyInput.prototype.onrelease = function (key){};
+    return WqxKeyInput;
 }();

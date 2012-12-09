@@ -6,7 +6,7 @@
     <script src="src/m65c02.js"></script>
     <!--<script src="refs/logs.txt"></script>-->
     <script src="src/wqx.js"></script>
-    <script src="src/keypad.js"></script>
+    <script src="src/keyinput.js"></script>
     <style>
         #wqx {
             width: 370px;
@@ -41,7 +41,7 @@
             -o-user-select: none;
             cursor: pointer;
         }
-        .keypad_unit:active {
+        .keypad_unit.pressed {
             background-color: rgb(192, 192, 192);
             border-color: black;
         }
@@ -70,13 +70,13 @@
     </div>
     <div id="keypad">
         <div>
-            <div class="keypad_unit"><div class="keypad_unit_label">Dict</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Card</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Calc</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Rem</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Data</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Time</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Net</div>
+            <div class="keypad_unit" data-key="F5"><div class="keypad_unit_label">Dict</div>
+            </div><div class="keypad_unit" data-key="F6"><div class="keypad_unit_label">Card</div>
+            </div><div class="keypad_unit" data-key="F7"><div class="keypad_unit_label">Calc</div>
+            </div><div class="keypad_unit" data-key="F8"><div class="keypad_unit_label">Rem</div>
+            </div><div class="keypad_unit" data-key="F9"><div class="keypad_unit_label">Data</div>
+            </div><div class="keypad_unit" data-key="F10"><div class="keypad_unit_label">Time</div>
+            </div><div class="keypad_unit" data-key="F11"><div class="keypad_unit_label">Net</div>
             </div><div class="keypad_unit" style="visibility: hidden">
             </div><div class="keypad_unit" style="visibility: hidden">
             </div><div class="keypad_unit" style="visibility: hidden"></div>
@@ -84,62 +84,62 @@
         <div>
             <div class="keypad_unit" style="visibility: hidden">
             </div><div class="keypad_unit" style="visibility: hidden">
-            </div><div class="keypad_unit"><div class="keypad_unit_label">F1</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">F2</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">F3</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">F4</div>
+            </div><div class="keypad_unit" data-key="F1"><div class="keypad_unit_label">F1</div>
+            </div><div class="keypad_unit" data-key="F2"><div class="keypad_unit_label">F2</div>
+            </div><div class="keypad_unit" data-key="F3"><div class="keypad_unit_label">F3</div>
+            </div><div class="keypad_unit" data-key="F4"><div class="keypad_unit_label">F4</div>
             </div><div class="keypad_unit" style="visibility: hidden">
             </div><div class="keypad_unit" style="visibility: hidden">
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Power</div>
+            </div><div class="keypad_unit" data-key="F12"><div class="keypad_unit_label">Power</div>
             </div><div class="keypad_unit" style="visibility: hidden"></div>
         </div>
         <div>
-            <div class="keypad_unit"><div class="keypad_unit_label">Q</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">W</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">E</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">R</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">T</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Y</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">U</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">I</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">O</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">P</div></div>
+            <div class="keypad_unit" data-key="Q"><div class="keypad_unit_label">Q</div>
+            </div><div class="keypad_unit" data-key="W"><div class="keypad_unit_label">W</div>
+            </div><div class="keypad_unit" data-key="E"><div class="keypad_unit_label">E</div>
+            </div><div class="keypad_unit" data-key="R"><div class="keypad_unit_label">R</div>
+            </div><div class="keypad_unit" data-key="T"><div class="keypad_unit_label">T</div>
+            </div><div class="keypad_unit" data-key="Y"><div class="keypad_unit_label">Y</div>
+            </div><div class="keypad_unit" data-key="U"><div class="keypad_unit_label">U</div>
+            </div><div class="keypad_unit" data-key="I"><div class="keypad_unit_label">I</div>
+            </div><div class="keypad_unit" data-key="O"><div class="keypad_unit_label">O</div>
+            </div><div class="keypad_unit" data-key="P"><div class="keypad_unit_label">P</div></div>
         </div>
         <div>
-            <div class="keypad_unit"><div class="keypad_unit_label">A</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">S</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">D</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">F</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">G</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">H</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">J</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">K</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">L</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Enter</div></div>
+            <div class="keypad_unit" data-key="A"><div class="keypad_unit_label">A</div>
+            </div><div class="keypad_unit" data-key="S"><div class="keypad_unit_label">S</div>
+            </div><div class="keypad_unit" data-key="D"><div class="keypad_unit_label">D</div>
+            </div><div class="keypad_unit" data-key="F"><div class="keypad_unit_label">F</div>
+            </div><div class="keypad_unit" data-key="G"><div class="keypad_unit_label">G</div>
+            </div><div class="keypad_unit" data-key="H"><div class="keypad_unit_label">H</div>
+            </div><div class="keypad_unit" data-key="J"><div class="keypad_unit_label">J</div>
+            </div><div class="keypad_unit" data-key="K"><div class="keypad_unit_label">K</div>
+            </div><div class="keypad_unit" data-key="L"><div class="keypad_unit_label">L</div>
+            </div><div class="keypad_unit" data-key="Enter"><div class="keypad_unit_label">Enter</div></div>
         </div>
         <div>
-            <div class="keypad_unit"><div class="keypad_unit_label">Z</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">X</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">C</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">V</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">B</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">N</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">M</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">PgUp</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Up</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">PgDn</div></div>
+            <div class="keypad_unit" data-key="Z"><div class="keypad_unit_label">Z</div>
+            </div><div class="keypad_unit" data-key="X"><div class="keypad_unit_label">X</div>
+            </div><div class="keypad_unit" data-key="C"><div class="keypad_unit_label">C</div>
+            </div><div class="keypad_unit" data-key="V"><div class="keypad_unit_label">V</div>
+            </div><div class="keypad_unit" data-key="B"><div class="keypad_unit_label">B</div>
+            </div><div class="keypad_unit" data-key="N"><div class="keypad_unit_label">N</div>
+            </div><div class="keypad_unit" data-key="M"><div class="keypad_unit_label">M</div>
+            </div><div class="keypad_unit" data-key="PageUp"><div class="keypad_unit_label">PgUp</div>
+            </div><div class="keypad_unit" data-key="Up"><div class="keypad_unit_label">Up</div>
+            </div><div class="keypad_unit" data-key="PageDown"><div class="keypad_unit_label">PgDn</div></div>
         </div>
         <div>
-            <div class="keypad_unit"><div class="keypad_unit_label">Help</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Shift</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Caps</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Esc</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">0</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">.</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">=</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Left</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Down</div>
-            </div><div class="keypad_unit"><div class="keypad_unit_label">Right</div></div>
+            <div class="keypad_unit" data-key="Tab"><div class="keypad_unit_label">Help</div>
+            </div><div class="keypad_unit" data-key="Shift"><div class="keypad_unit_label">Shift</div>
+            </div><div class="keypad_unit" data-key="CapsLock"><div class="keypad_unit_label">Caps</div>
+            </div><div class="keypad_unit" data-key="Esc"><div class="keypad_unit_label">Esc</div>
+            </div><div class="keypad_unit" data-key="0"><div class="keypad_unit_label">0</div>
+            </div><div class="keypad_unit" data-key="Period"><div class="keypad_unit_label">.</div>
+            </div><div class="keypad_unit" data-key="Equals"><div class="keypad_unit_label">=</div>
+            </div><div class="keypad_unit" data-key="Left"><div class="keypad_unit_label">Left</div>
+            </div><div class="keypad_unit" data-key="Down"><div class="keypad_unit_label">Down</div>
+            </div><div class="keypad_unit" data-key="Right"><div class="keypad_unit_label">Right</div></div>
         </div>
     </div>
 </div>
@@ -151,8 +151,49 @@
         <a href="./rom/obj.bin">ROM文件下载地址</a></span>
 </p>
 <script>
-    var wqx = new Wqx(document.getElementById('lcd'));
-    var keypad = new WqxKeypad(wqx, document.getElementById('input'));
+    var lcdDiv = document.getElementById('lcd')
+    var wqx = new Wqx(lcdDiv);
+    var keyInput = new WqxKeyInput(wqx, document.getElementById('input'));
+    var keypadDiv = document.getElementById('keypad');
+    keyInput.onpress = function (key){
+        var keyUnit = document.querySelector('div.keypad_unit[data-key=' + key + ']');
+        if (keyUnit) {
+            keyUnit.classList.add('pressed');
+        }
+    };
+    keyInput.onrelease = function (key){
+        var keyUnit = document.querySelector('div.keypad_unit[data-key=' + key + ']');
+        if (keyUnit) {
+            keyUnit.classList.remove('pressed');
+        }
+    };
+    keypadDiv.addEventListener('mousedown', function (evt){
+        var div = evt.target;
+        do {
+            if (div.classList.contains('keypad_unit')) {
+                keyInput.keyDown(div.getAttribute('data-key'));
+                break;
+            }
+            div = div.parentNode;
+        } while (div && div.nodeType == 1);
+    }, false);
+    keypadDiv.addEventListener('mouseup', function (evt){
+        var div = evt.target;
+        do {
+            if (div.classList.contains('keypad_unit')) {
+                keyInput.keyUp(div.getAttribute('data-key'));
+                break;
+            }
+            div = div.parentNode;
+        } while (div && div.nodeType == 1);
+    }, false);
+    document.getElementById('toogle_keypad').addEventListener('click', function (){
+        if (keypadDiv.style.display === 'none') {
+            keypadDiv.style.display = '';
+        } else {
+            keypadDiv.style.display = 'none';
+        }
+    }, false);
 
     var romLoaded = false;
     var norLoaded = false;
@@ -162,10 +203,10 @@
             document.getElementById('run').removeAttribute('disabled');
         }
     }
-    div.addEventListener('dragover', function (evt){
+    lcdDiv.addEventListener('dragover', function (evt){
         evt.preventDefault();
-    });
-    div.addEventListener('drop', function (evt){
+    }, false);
+    lcdDiv.addEventListener('drop', function (evt){
         var file;
         try {
             file = evt.dataTransfer.files[0];
@@ -179,10 +220,10 @@
             wqx.loadBROM(fileReader.result);
             romLoaded = true;
             check();
-        });
+        }, false);
         fileReader.readAsArrayBuffer(file);
         evt.preventDefault();
-    });
+    }, false);
 
     function loadDemo(){
         var xhrNor = new XMLHttpRequest();
@@ -192,7 +233,7 @@
             wqx.loadNorFlash(xhrNor.response);
             norLoaded = true;
             check();
-        });
+        }, false);
         xhrNor.send();
         // todo: progress info
         document.getElementById('load_demo').setAttribute('disabled', 'disabled');
@@ -200,13 +241,13 @@
         xhrRom.responseType = 'arraybuffer';
         xhrRom.addEventListener('progress', function (evt){
             document.getElementById('load_demo').innerHTML = 'ROM加载中 ' + evt.loaded + '/' + evt.total;
-        });
+        }, false);
         xhrRom.addEventListener('loadend', function (){
             document.getElementById('load_demo').innerHTML = 'ROM加载完毕';
             wqx.loadBROM(xhrRom.response);
             romLoaded = true;
             check();
-        });
+        }, false);
         xhrRom.open('GET', './rom/obj.bin', true);
         xhrRom.send();
 
