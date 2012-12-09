@@ -125,7 +125,7 @@ var Wqx = (function (){
     }
 
     Wqx.prototype.initLcd = function (){
-        var doc = div.ownerDocument;
+        var doc = this.div.ownerDocument;
         var canvas = doc.createElement('canvas');
         canvas.width = 320;
         canvas.height = 160;
