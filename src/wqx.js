@@ -52,8 +52,9 @@ var Wqx = (function (){
 
     var SPDC1016Frequency = 3686400;
     var FrameRate = 30;
-    var NMIFrameIndex = FrameRate / 2;
     var CyclesPerFrame = SPDC1016Frequency / FrameRate;
+    var CyclesPerNMI = SPDC1016Frequency / 2;
+    var CyclesPer10Ms = SPDC1016Frequency / 100;
 
     function memcpy(dest, src, length){
         for (var i=0; i<length; i++) {
@@ -87,6 +88,8 @@ var Wqx = (function (){
         this.canvasCtx = canvas.getContext('2d');
 
         this.frameCounter = 0;
+        this.nmiCounter = 0;
+        this.clockCounter = 0;
         this.shouldIrq = false;
         this.shouldNmi = false;
         this.frameTimer = null;
@@ -290,12 +293,9 @@ var Wqx = (function (){
         console.log('read04StopTimer0: ' + this.ram[io04_general_ctrl]);
         return this.ram[io04_general_ctrl];
     };
-    Wqx.prototype.getCpuCycles = function (){
-        return (this.frameCounter * CyclesPerFrame) + this.cpu.cycles;
-    };
     Wqx.prototype.read02Timer0Value = function (){
         if (this.timer0started) {
-            this.timer0value = Math.floor((this.getCpuCycles() - this.timer0startcycles) /
+            this.timer0value = Math.floor((this.cpu.cycles - this.timer0startcycles) /
                 SPDC1016Frequency) & 0xFF;
         }
         console.log('read02Timer0Value: ' + this.timer0value);
@@ -304,7 +304,7 @@ var Wqx = (function (){
     Wqx.prototype.read05StartTimer0 = function (){
         console.log('read05StartTimer0');
         this.timer0started = true;
-        this.timer0startcycles = this.getCpuCycles();
+        this.timer0startcycles = this.cpu.cycles;
 //        if (this.read02Timer0Value() == 0x3F) {
 //            //gTimer0WaveoutStarted = 1;
 //            //mayTimer0Var1 = 0;
@@ -393,7 +393,7 @@ var Wqx = (function (){
     Wqx.prototype.write02Timer0Value = function (value){
         console.log('write02Timer0Value: ' + value);
         if (this.timer0started) {
-            this.timer0startcycles = (this.getCpuCycles() -
+            this.timer0startcycles = (this.cpu.cycles -
                 (value * SPDC1016Frequency / 10));
         } else {
             this.timer0value = value;
@@ -861,6 +861,9 @@ var Wqx = (function (){
     Wqx.prototype.run = function (){
         this.initCpu();
         clearInterval(this.frameTimer);
+        this.frameCounter = 0;
+        this.nmiCounter = 0;
+        this.clockCounter = 0;
         this.frameTimer = setInterval(this.frame.bind(this), 1000 / FrameRate);
     };
 
@@ -869,9 +872,10 @@ var Wqx = (function (){
     };
 
     Wqx.prototype.frame = function (){
-        var deadlockCounter = 0;
-        this.cpu.cycles = 0;
-        do {
+        var frameCycles = CyclesPerFrame * (this.frameCounter + 1);
+        var nmiCycles = CyclesPerNMI * (this.nmiCounter + 1);
+        var clockCycles = CyclesPer10Ms * (this.clockCounter + 1);
+        while (this.cpu.cycles < frameCycles) {
             if (this.shouldNmi) {
                 this.cpu.nmi = 0;
                 this.shouldNmi = false;
@@ -880,22 +884,26 @@ var Wqx = (function (){
                 this.shouldIrq = false;
             }
             this.cpu.execute();
+            if (this.cpu.cycles >= nmiCycles) {
+                this.nmiCounter++;
+                nmiCycles += CyclesPerNMI;
+            }
+            if (this.cpu.cycles >= clockCycles) {
+                this.clockCounter ++;
+                clockCycles += CyclesPer10Ms;
+                if (this.ram[io04_general_ctrl] & 0x0F) {
+                    this.ram[io01_int_enable] |= 0x08;
+                    this.shouldIrq = true;
+                }
+                if (this.timer0started) {
+                    this.shouldIrq = true;
+                }
+            }
             this.totalInsts++;
-        } while (this.cpu.cycles < CyclesPerFrame);
-        this.frameCounter++;
-        this.cpu.cycles -= CyclesPerFrame;
-        if ((this.frameCounter % FrameRate) === NMIFrameIndex) {
-            this.shouldNmi = true;
-        }
-        if (this.ram[io04_general_ctrl] & 0x0F) {
-            this.ram[io01_int_enable] |= 0x08;
-            this.shouldIrq = true;
-        }
-        if (this.timer0started) {
-            this.shouldIrq = true;
         }
         document.title = (this.frameCounter);
         this.updateLCD();
+        this.frameCounter++;
     };
 
     return Wqx;
