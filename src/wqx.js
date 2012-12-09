@@ -887,6 +887,7 @@ var Wqx = (function (){
             if (this.cpu.cycles >= nmiCycles) {
                 this.nmiCounter++;
                 nmiCycles += CyclesPerNMI;
+                this.shouldNmi = true;
             }
             if (this.cpu.cycles >= clockCycles) {
                 this.clockCounter ++;
