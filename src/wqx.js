@@ -77,15 +77,7 @@ var Wqx = (function (){
     function Wqx(div, opts){
         opts = opts || {};
 
-        var doc = div.ownerDocument;
-        var canvas = doc.createElement('canvas');
-        this.width = div.offsetWidth;
-        this.height = div.offsetHeight;
-        canvas.width = this.width;
-        canvas.height = this.height;
-        div.appendChild(canvas);
-        this.canvas = canvas;
-        this.canvasCtx = canvas.getContext('2d');
+        this.div = div;
 
         this.frameCounter = 0;
         this.nmiCounter = 0;
@@ -123,15 +115,27 @@ var Wqx = (function (){
         this.bbsbankheader = [];
         this.may4000ptr = null;
         this.cpu = null;
+        this.initLcd();
         this.initRom();
         this.initNor();
         this.initRam();
         this.initMemmap();
         this.initIo();
-        this.initCpu();
+        this.resetCpu();
     }
 
-
+    Wqx.prototype.initLcd = function (){
+        var doc = div.ownerDocument;
+        var canvas = doc.createElement('canvas');
+        canvas.width = 320;
+        canvas.height = 160;
+        this.div.appendChild(canvas);
+        this.canvas = canvas;
+        this.canvasCtx = canvas.getContext('2d');
+        this.canvasCtx.fillStyle = '#32284A';
+        this.canvasCtx.setTransform(2, 0, 0, 2, 0, 0);
+        this.canvasCtx.save();
+    };
     Wqx.prototype.initRom = function (){
         this.rom = new Uint8Array(0x8000 * 512);
         for (var i=0; i<256; i++) {
@@ -769,7 +773,7 @@ var Wqx = (function (){
         console.log('write20JG');
     };
 
-    Wqx.prototype.initCpu = function (){
+    Wqx.prototype.resetCpu = function (){
         this.cpu = new M65C02Context();
         this.cpu.ram = this.ram;
         this.cpu.memmap = this.memmap;
@@ -802,6 +806,7 @@ var Wqx = (function (){
             memcpy(bufferDest2, bufferSrc2, 0x4000);
             byteOffset += 0x8000;
         }
+        this.resetCpu();
     };
 
     Wqx.prototype.loadNorFlash = function (buffer){
@@ -815,26 +820,42 @@ var Wqx = (function (){
             memcpy(bufferDest2, bufferSrc2, 0x4000);
             byteOffset += 0x8000;
         }
+        this.resetCpu();
     };
 
     Wqx.prototype.updateLCD = function (){
         var lcdBuffer = getByteArray(this.ram, this.lcdbuffaddr, 160*80/8);
-        var imageData = this.canvasCtx.createImageData(160, 80);
+//        var imageData = this.canvasCtx.createImageData(160, 80);
+//        for (var i=0; i<80; i++) {
+//            for (var j=0; j<20; j++) {
+//                var p = (160 * i + 8 * j) * 4;
+//                var pixelsByte = lcdBuffer[20*i+j];
+//                imageData.data[p+3] = (pixelsByte & 0x80) ? 255 : 0;
+//                imageData.data[p+7] = (pixelsByte & 0x40) ? 255 : 0;
+//                imageData.data[p+11] = (pixelsByte & 0x20) ? 255 : 0;
+//                imageData.data[p+15] = (pixelsByte & 0x10) ? 255 : 0;
+//                imageData.data[p+19] = (pixelsByte & 0x08) ? 255 : 0;
+//                imageData.data[p+23] = (pixelsByte & 0x04) ? 255 : 0;
+//                imageData.data[p+27] = (pixelsByte & 0x02) ? 255 : 0;
+//                imageData.data[p+31] = (pixelsByte & 0x01) ? 255 : 0;
+//            }
+//        }
+//        this.canvasCtx.putImageData(imageData, 0, 0);
+        this.canvasCtx.clearRect(0, 0, 160, 80);
         for (var i=0; i<80; i++) {
             for (var j=0; j<20; j++) {
-                var p = (160 * i + 8 * j) * 4;
+                var p = j * 8;
                 var pixelsByte = lcdBuffer[20*i+j];
-                imageData.data[p+3] = (pixelsByte & 0x80) ? 255 : 0;
-                imageData.data[p+7] = (pixelsByte & 0x40) ? 255 : 0;
-                imageData.data[p+11] = (pixelsByte & 0x20) ? 255 : 0;
-                imageData.data[p+15] = (pixelsByte & 0x10) ? 255 : 0;
-                imageData.data[p+19] = (pixelsByte & 0x08) ? 255 : 0;
-                imageData.data[p+23] = (pixelsByte & 0x04) ? 255 : 0;
-                imageData.data[p+27] = (pixelsByte & 0x02) ? 255 : 0;
-                imageData.data[p+31] = (pixelsByte & 0x01) ? 255 : 0;
+                if (pixelsByte & 0x80) if (j > 0) this.canvasCtx.fillRect(p + 0, i, 1, 1);
+                if (pixelsByte & 0x40) this.canvasCtx.fillRect(p + 1, i, 1, 1);
+                if (pixelsByte & 0x20) this.canvasCtx.fillRect(p + 2, i, 1, 1);
+                if (pixelsByte & 0x10) this.canvasCtx.fillRect(p + 3, i, 1, 1);
+                if (pixelsByte & 0x08) this.canvasCtx.fillRect(p + 4, i, 1, 1);
+                if (pixelsByte & 0x04) this.canvasCtx.fillRect(p + 5, i, 1, 1);
+                if (pixelsByte & 0x02) this.canvasCtx.fillRect(p + 6, i, 1, 1);
+                if (pixelsByte & 0x01) this.canvasCtx.fillRect(p + 7, i, 1, 1);
             }
         }
-        this.canvasCtx.putImageData(imageData, 0, 0);
     };
 
     Wqx.prototype.checkTimebaseAndEnableIRQnEXIE1 = function (){
@@ -859,16 +880,22 @@ var Wqx = (function (){
     };
 
     Wqx.prototype.run = function (){
-        this.initCpu();
-        clearInterval(this.frameTimer);
-        this.frameCounter = 0;
-        this.nmiCounter = 0;
-        this.clockCounter = 0;
-        this.frameTimer = setInterval(this.frame.bind(this), 1000 / FrameRate);
+        if (!this.frameTimer) {
+            this.frameTimer = setInterval(this.frame.bind(this),
+                1000 / FrameRate);
+        }
     };
 
     Wqx.prototype.stop = function (){
         clearInterval(this.frameTimer);
+        this.frameTimer = null;
+    };
+
+    Wqx.prototype.reset = function (){
+        this.resetCpu();
+        this.frameCounter = 0;
+        this.nmiCounter = 0;
+        this.clockCounter = 0;
     };
 
     Wqx.prototype.frame = function (){

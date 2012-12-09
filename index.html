@@ -9,27 +9,33 @@
     <script src="src/keypad.js"></script>
     <style>
         #wqx {
-            width: 640px;
-            height: 320px;
-            background-color: #32cd32;
+            width: 320px;
+            height: 160px;
+            background-color: #fffde8;
         }
     </style>
 </head>
 <body>
 <h1>文曲星模拟器</h1>
+<button id="run" onclick="run();" disabled>run</button>
+<button id="stop" onclick="stop();" disabled>stop</button>
+<button id="reset" onclick="reset();">reset</button>
+<button id="load_demo" onclick="loadDemo();">loadDemo</button>
+<div id="wqx"></div>
 <div>
-    <span>orginal: http://bbs.emsky.net/viewthread.php?tid=33474<br/>
+    <button id="toogle_keypad">软键盘 开/关</button>
+    <label><input tabindex="0" id="input" type="text" placeholder="键盘输入" style="ime-mode: disabled;"/></label>
+</div>
+<div id="keypad">
+
+</div>
+<p>
+    <span>orginal: <a href="http://bbs.emsky.net/viewthread.php?tid=33474">http://bbs.emsky.net/viewthread.php?tid=33474</a><br/>
         目前只在chrome浏览器测试过，别的浏览器应该也有能跑的。<br/>
         由于ROM文件有16M之大，若加载过慢，请自行下载到硬盘上，拖拽到模拟器的屏幕区域手动加载。<br/>
         若想要离线使用能正常加载，请在chrome启动参数中加入`--allow-file-access-from-files`。<br/>
         <a href="./rom/obj.bin">ROM文件下载地址</a></span>
-</div>
-<div><span id="rom_progress">ROM尚未加载</span><span></span></div>
-<button id="load_demo" onclick="loadDemo();">loadDemo</button>
-<button id="run" onclick="run();" disabled>run</button>
-<button id="stop" onclick="stop();" disabled>stop</button>
-<label><input tabindex="0" id="input" type="text" placeholder="键盘输入" style="ime-mode: disabled;"/></label>
-<div id="wqx"></div>
+</p>
 <script>
     var div = document.getElementById('wqx');
     var wqx = new Wqx(div);
@@ -80,10 +86,10 @@
         xhrRom = new XMLHttpRequest();
         xhrRom.responseType = 'arraybuffer';
         xhrRom.addEventListener('progress', function (evt){
-            document.getElementById('rom_progress').innerHTML = 'ROM加载中 ' + evt.loaded + '/' + evt.total;
+            document.getElementById('load_demo').innerHTML = 'ROM加载中 ' + evt.loaded + '/' + evt.total;
         });
         xhrRom.addEventListener('loadend', function (){
-            document.getElementById('rom_progress').innerHTML = 'ROM加载完毕';
+            document.getElementById('load_demo').innerHTML = 'ROM加载完毕';
             wqx.loadBROM(xhrRom.response);
             romLoaded = true;
             check();
@@ -102,6 +108,9 @@
         wqx.stop();
         document.getElementById('stop').setAttribute('disabled', 'disabled');
         document.getElementById('run').removeAttribute('disabled');
+    }
+    function reset(){
+        wqx.reset();
     }
 
 </script>
