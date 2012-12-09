@@ -9,9 +9,50 @@
     <script src="src/keypad.js"></script>
     <style>
         #wqx {
+            width: 370px;
+        }
+        #lcd {
             width: 320px;
             height: 160px;
             background-color: #98fb98;
+            padding: 0 25px;
+        }
+        #keypad {
+            border: 1px solid gray;
+            border-radius: 5px;
+            padding: 5px 3px 5px 5px;
+            width: 360px;
+            height: 152px;
+        }
+        #keypad>div {
+            height: 24px;
+            margin-bottom: 2px;
+        }
+        .keypad_unit {
+            width: 32px;
+            height: 20px;
+            border-radius: 3px;
+            display: inline-block;
+            background-color: rgb(213, 233, 205);
+            border: 1px solid rgb(128, 208, 70);
+            margin-right: 2px;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -o-user-select: none;
+            cursor: pointer;
+        }
+        .keypad_unit:active {
+            background-color: rgb(192, 192, 192);
+            border-color: black;
+        }
+        .keypad_unit_label {
+            font-size: 12px;
+            line-height: 20px;
+            color: rgb(128, 208, 70);
+            text-align: center;
+            position: absolute;
+            width: 32px;
+            height: 20px;
         }
     </style>
 </head>
@@ -21,13 +62,86 @@
 <button id="stop" onclick="stop();" disabled>stop</button>
 <button id="reset" onclick="reset();">reset</button>
 <button id="load_demo" onclick="loadDemo();">loadDemo</button>
-<div id="wqx"></div>
-<div>
-    <button id="toogle_keypad">软键盘 开/关</button>
-    <label><input tabindex="0" id="input" type="text" placeholder="键盘输入" style="ime-mode: disabled;"/></label>
-</div>
-<div id="keypad">
-
+<div id="wqx">
+    <div id="lcd"></div>
+    <div>
+        <button id="toogle_keypad">软键盘 开/关</button>
+        <label><input tabindex="0" id="input" type="text" placeholder="键盘输入" style="ime-mode: disabled;"/></label>
+    </div>
+    <div id="keypad">
+        <div>
+            <div class="keypad_unit"><div class="keypad_unit_label">Dict</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Card</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Calc</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Rem</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Data</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Time</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Net</div>
+            </div><div class="keypad_unit" style="visibility: hidden">
+            </div><div class="keypad_unit" style="visibility: hidden">
+            </div><div class="keypad_unit" style="visibility: hidden"></div>
+        </div>
+        <div>
+            <div class="keypad_unit" style="visibility: hidden">
+            </div><div class="keypad_unit" style="visibility: hidden">
+            </div><div class="keypad_unit"><div class="keypad_unit_label">F1</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">F2</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">F3</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">F4</div>
+            </div><div class="keypad_unit" style="visibility: hidden">
+            </div><div class="keypad_unit" style="visibility: hidden">
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Power</div>
+            </div><div class="keypad_unit" style="visibility: hidden"></div>
+        </div>
+        <div>
+            <div class="keypad_unit"><div class="keypad_unit_label">Q</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">W</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">E</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">R</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">T</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Y</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">U</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">I</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">O</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">P</div></div>
+        </div>
+        <div>
+            <div class="keypad_unit"><div class="keypad_unit_label">A</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">S</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">D</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">F</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">G</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">H</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">J</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">K</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">L</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Enter</div></div>
+        </div>
+        <div>
+            <div class="keypad_unit"><div class="keypad_unit_label">Z</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">X</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">C</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">V</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">B</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">N</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">M</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">PgUp</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Up</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">PgDn</div></div>
+        </div>
+        <div>
+            <div class="keypad_unit"><div class="keypad_unit_label">Help</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Shift</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Caps</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Esc</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">0</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">.</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">=</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Left</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Down</div>
+            </div><div class="keypad_unit"><div class="keypad_unit_label">Right</div></div>
+        </div>
+    </div>
 </div>
 <p>
     <span>orginal: <a href="http://bbs.emsky.net/viewthread.php?tid=33474">http://bbs.emsky.net/viewthread.php?tid=33474</a><br/>
@@ -37,8 +151,7 @@
         <a href="./rom/obj.bin">ROM文件下载地址</a></span>
 </p>
 <script>
-    var div = document.getElementById('wqx');
-    var wqx = new Wqx(div);
+    var wqx = new Wqx(document.getElementById('lcd'));
     var keypad = new WqxKeypad(wqx, document.getElementById('input'));
 
     var romLoaded = false;
