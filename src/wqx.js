@@ -843,8 +843,8 @@ var Wqx = (function (){
     Wqx.prototype.encounterIRQClock = function (){
         if ((this.clockRecords[10] & 0x02) && (this.mayClockFlags & 0x02)) {
             if (((this.clockRecords[7] & 0x80) && !((this.clockRecords[7] ^ this.clockRecords[2])) & 0x1F) ||
-                ((this.clockRecords[7] & 0x80) && !((this.clockRecords[7] ^ this.clockRecords[2])) & 0x1F) ||
-                ((this.clockRecords[7] & 0x80) && !((this.clockRecords[7] ^ this.clockRecords[2])) & 0x1F)) {
+                ((this.clockRecords[6] & 0x80) && !((this.clockRecords[6] ^ this.clockRecords[1])) & 0x3F) ||
+                ((this.clockRecords[5] & 0x80) && !((this.clockRecords[5] ^ this.clockRecords[0])) & 0x3F)) {
                 return true;
             }
         }
