@@ -70,61 +70,61 @@ var WqxKeyInput = function (){
         'F10': 0x0D,
         'F11': 0x0E,
 
-        'Tab': 0x10, // 50 help
-        'Shift': 0x11, // 51 Shift
-        'CapsLock': 0x12, // 52 CapsLock
-        'Esc': 0x13, // 53 AC
-        '0': 0x14, // 54 0
-        'Period': 0x15, // 55 .
-        'Equals': 0x16, // 56 =
-        'Left': 0x17, // 57 `<-`
+        'Tab': 0x38, // 50 help
+        'Shift': 0x39, // 51 Shift
+        'CapsLock': 0x3A, // 52 CapsLock
+        'Esc': 0x3B, // 53 AC
+        '0': 0x3C, // 54 0
+        'Period': 0x3D, // 55 .
+        'Equals': 0x3E, // 56 =
+        'Left': 0x3F, // 57 `<-`
 
-        'Z': 0x18, // 40 Z
-        'X': 0x19, // 41 X
-        'C': 0x1A, // 42 C
-        'V': 0x1B, // 43 V
-        'B': 0x1C, // 44 B
-        'N': 0x1D, // 46 N
-        'M': 0x1E, // 46 M
-        'PageUp': 0x1F, // 47 PgUp
+        'Z': 0x30, // 40 Z
+        'X': 0x31, // 41 X
+        'C': 0x32, // 42 C
+        'V': 0x33, // 43 V
+        'B': 0x34, // 44 B
+        'N': 0x35, // 46 N
+        'M': 0x36, // 46 M
+        'PageUp': 0x37, // 47 PgUp
 
-        'A': 0x20, // 30 A
-        'S': 0x21, // 31 S
-        'D': 0x22, // 32 D
-        'F': 0x23, // 33 F
-        'G': 0x24, // 34 G
-        'H': 0x25, // 35 H
-        'J': 0x26, // 36 J
-        'K': 0x27, // 37 K
+        'A': 0x28, // 30 A
+        'S': 0x29, // 31 S
+        'D': 0x2A, // 32 D
+        'F': 0x2B, // 33 F
+        'G': 0x2C, // 34 G
+        'H': 0x2D, // 35 H
+        'J': 0x2E, // 36 J
+        'K': 0x2F, // 37 K
 
-        'Q': 0x28, // 20 Q
-        'W': 0x29, // 21 W
-        'E': 0x2A, // 22 E
-        'R': 0x2B, // 23 R
-        'T': 0x2C, // 24 T
-        'Y': 0x2D, // 25 Y
-        'U': 0x2E, // 26 U
-        'I': 0x2F, // 27 I
+        'Q': 0x20, // 20 Q
+        'W': 0x21, // 21 W
+        'E': 0x22, // 22 E
+        'R': 0x23, // 23 R
+        'T': 0x24, // 24 T
+        'Y': 0x25, // 25 Y
+        'U': 0x26, // 26 U
+        'I': 0x27, // 27 I
 
-        'O': 0x30, // 28 O
-        'L': 0x31, // 38 L
-        'Up': 0x32, // 48 `^`
-        'Down': 0x33, // 58 `v`
-        'P': 0x34, // 29 P
-        'Enter': 0x35, // 39 Enter
-        'PageDown': 0x36, // 49 PgDown
-        'Right': 0x37, // 59 `->`
+        'O': 0x18, // 28 O
+        'L': 0x19, // 38 L
+        'Up': 0x1A, // 48 `^`
+        'Down': 0x1B, // 58 `v`
+        'P': 0x1C, // 29 P
+        'Enter': 0x1D, // 39 Enter
+        'PageDown': 0x1E, // 49 PgDown
+        'Right': 0x1F, // 59 `->`
 
-        'F1': 0x3A, // 12 F1
-        'F2': 0x3B, // 13 F2
-        'F3': 0x3C, // 14 F3
-        'F4': 0x3D // 15 F4
+        'F1': 0x10, // 12 F1
+        'F2': 0x11, // 13 F2
+        'F3': 0x12, // 14 F3
+        'F4': 0x13 // 15 F4
     };
     WqxKeyInput.prototype._keyDownOrUp = function (key, downOrUp){
         var wqxKeyCode = keyNameToKeypadMatrixIndex[key];
         if (wqxKeyCode) {
-            var row = wqxKeyCode >> 3;
-            var col = wqxKeyCode & 0x07;
+            var col = wqxKeyCode >> 3;
+            var row = wqxKeyCode & 0x07;
             this.wqx.keypadmatrix[row][col] = downOrUp ? 1 : 0;
         }
     };

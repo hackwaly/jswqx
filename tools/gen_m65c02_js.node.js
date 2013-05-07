@@ -20,11 +20,11 @@ function $WORD(v){
     return '(((' + v + '<0xFFFF ? ' + $BYTE('(' + v + '+1)') + ' : this.ram[0]) << 8) | ' + $BYTE(v) + ')';
 }
 
-var $READ = '(this.io_map[this._addr] ? ' +
+var $READ = '(this.io_read_map[this._addr] ? ' +
         'this.io_read(this._addr) : ' +
         $BYTE('this._addr') + ')';
 function $WRITE(v){
-    return 'if (this.io_map[this._addr]) {' +
+    return 'if (this.io_write_map[this._addr]) {' +
             'this.io_write(this._addr, ' + v + ');' +
         '} else {' +
             $BYTE('this._addr') + '=' + v + ';' +
@@ -47,9 +47,9 @@ var $ABS = 'this._addr = ' +  $WORD('this.reg_pc') + ';' +
 var $ABSIINDX = 'this._tmp1 = ' + $WORD('this.reg_pc') + ' + this.reg_x;' +
     'this._addr = ' + $WORD('this._tmp1') + ';' +
     'this.reg_pc = (this.reg_pc + 2) & 0xFFFF;';
-var $ABSX = 'this._addr = ' +  $WORD('this.reg_pc') + ' + this.reg_x;' +
+var $ABSX = 'this._addr = (' +  $WORD('this.reg_pc') + ' + this.reg_x) & 0xFFFF;' +
     'this.reg_pc = (this.reg_pc + 2) & 0xFFFF;';
-var $ABSY = 'this._addr = ' +  $WORD('this.reg_pc') + ' + this.reg_y;' +
+var $ABSY = 'this._addr = (' +  $WORD('this.reg_pc') + ' + this.reg_y) & 0xFFFF;' +
     'this.reg_pc = (this.reg_pc + 2) & 0xFFFF;';
 var $IABS = 'this._tmp1 = ' + $WORD('this.reg_pc') + ';' +
     'this._addr = ' + $WORD('this._tmp1') + ';' +
@@ -71,7 +71,7 @@ var $ZPGX = 'this._addr = (' + $BYTE('this.reg_pc') + ' + this.reg_x) & 0xFF;' +
 var $ZPGY = 'this._addr = (' + $BYTE('this.reg_pc') + ' + this.reg_y) & 0xFF;' +
     'this.reg_pc = (this.reg_pc + 1) & 0xFFFF;';
 var $INDY = 'this._tmp1 = ' + $BYTE('this.reg_pc') + ';' +
-    'this._addr = ' + $WORD('this._tmp1') + ' + this.reg_y;' +
+    'this._addr = (' + $WORD('this._tmp1') + ' + this.reg_y) & 0xFFFF;' +
     'this.reg_pc = (this.reg_pc + 1) & 0xFFFF;';
 var $IZPG = 'this._tmp1 = ' + $BYTE('this.reg_pc') + ';' +
     'this._addr = ((this._tmp1 < 0xFF ? this.ram[this._tmp1+1] : this.ram[0]) << 8) | this.ram[this._tmp1];' +
@@ -259,7 +259,8 @@ var $SMB7 = 'this._tmp1 = ' + $READ + ' | 0x80;' + $SETNZ('this._tmp1') + $WRITE
 
 // AF_BREAK is not set on wqxsim
 //regs.ps |= AF_BREAK;
-var $RTI = $PLP + $CLI +
+// wqx has no CLI there.
+var $RTI = $PLP + //$CLI +
     'this.irq = 1;' +
     'this.reg_pc = ' + $POP + ';' +
     'this.reg_pc |= (' + $POP + ' << 8);';
@@ -605,7 +606,8 @@ function $M65C02(){
         'function M65C02Context(){' +
             'this.ram = null;' +
             'this.memmap = null;' +
-            'this.io_map = null;' +
+            'this.io_read_map = null;' +
+            'this.io_write_map = null;' +
             'this.io_read = null;' +
             'this.io_write = null;' +
             'this.cycles = 0;' +
@@ -659,6 +661,12 @@ function $M65C02(){
             'this._code = ' + $BYTE('this.reg_pc') + ';' +
             'this.reg_pc = (this.reg_pc + 1) & 0xFFFF;' +
             $BINARY_IF_INSTRUCTIONS(0, 0xFF) +
+            'if (!this.stp) {' +
+                'if (!this.nmi) { ' + $NMI + ' }' +
+                'if (!this.irq) { ' + $IRQ + ' }' +
+            '}' +
+        '};' +
+        'M65C02Context.prototype.doIrq = function (){' +
             'if (!this.stp) {' +
                 'if (!this.nmi) { ' + $NMI + ' }' +
                 'if (!this.irq) { ' + $IRQ + ' }' +
