@@ -586,11 +586,11 @@ var Wqx = (function (){
         if (this.ram[62] >= 0x07) {
             if (this.ram[62] === 0x0B) {
                 this.ram[61] = 0xF8;
-                this.mayClockFlags1 |= value & 0x07;
+                this.mayClockFlags |= value & 0x07;
                 this.clockRecords[0x0B] = value ^ (this.clockRecords[0x0B] ^ value) & 0x7F;
             } else if (this.ram[62] === 0x0A) {
                 this.clockRecords[0x0A] = value;
-                this.mayClockFlags1 |= value & 0x07;
+                this.mayClockFlags |= value & 0x07;
             } else {
                 this.clockRecords[this.ram[62] % 80] = value;
             }
@@ -826,7 +826,7 @@ var Wqx = (function (){
         }
     };
 
-    Wqx.prototype.mayClockFlags1 = 0;
+    Wqx.prototype.mayClockFlags = 0;
     Wqx.prototype.adjustTime = function (){
         if (++this.clockRecords[0] >= 60) {
             this.clockRecords[0] = 0;
@@ -841,6 +841,13 @@ var Wqx = (function (){
     };
 
     Wqx.prototype.encounterIRQClock = function (){
+        if ((this.clockRecords[10] & 0x02) && (this.mayClockFlags & 0x02)) {
+            if (((this.clockRecords[7] & 0x80) && !((this.clockRecords[7] ^ this.clockRecords[2])) & 0x1F) ||
+                ((this.clockRecords[7] & 0x80) && !((this.clockRecords[7] ^ this.clockRecords[2])) & 0x1F) ||
+                ((this.clockRecords[7] & 0x80) && !((this.clockRecords[7] ^ this.clockRecords[2])) & 0x1F)) {
+                return true;
+            }
+        }
         return false;
     };
 
