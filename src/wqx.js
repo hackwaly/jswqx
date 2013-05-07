@@ -826,31 +826,27 @@ var Wqx = (function (){
         }
     };
 
-    Wqx.prototype.checkTimebaseAndEnableIRQnEXIE1 = function (){
-        //if ( gFixedRAM0_04_general_ctrl & 0xF )
-        //{
-        //    // TimeBase Clock Select bit0~3
-        //    LOBYTE(gThreadFlags) = gThreadFlags | 0x10; // add 0x10 to gThreadFlags
-        //    gFixedRAM0[(unsigned __int8)io01_int_ctrl] |= 8u;// EXTERNAL INTERRUPT SELECT1
-        //}
-        if (this.ram[io04_general_ctrl] & 0x0F) {
-            this.shouldIrq = true;
-            this.ram[io01_int_enable] |= 0x08; // EXTERNAL INTERRUPT SELECT1
+    Wqx.prototype.mayClockFlags1 = 0;
+    Wqx.prototype.adjustTime = function (){
+        if (++this.clockRecords[0] >= 60) {
+            this.clockRecords[0] = 0;
+            if (++this.clockRecords[1] >= 60) {
+                this.clockRecords[1] = 0;
+                if (++this.clockRecords[2] >= 24) {
+                    this.clockRecords[2] &= 0;
+                    ++this.clockRecords[3];
+                }
+            }
         }
     };
 
-    Wqx.prototype.turnoff2HzNMIMaskAddIRQFlag = function (){
-        if (this.ram[io04_general_ctrl] & 0x0F) {
-            this.shouldIrq = true;
-            // 2Hz NMI Mask off
-            this.ram[io01_int_enable] |= 0x10;
-        }
+    Wqx.prototype.encounterIRQClock = function (){
+        return false;
     };
 
     Wqx.prototype.run = function (){
         this._timerCounter = 0;
         this._instCount = 0;
-        this.mayClockFlags1 = 0;
         this.clockRecords = new Uint8Array(80);
         if (!this.frameTimer) {
             this.frameTimer = setInterval(this.frame.bind(this),
@@ -919,21 +915,26 @@ var Wqx = (function (){
                 }
             }
             this.cpu.execute();
-            if (this.shouldNmi) {
-                this.cpu.nmi = 0;
-                this.shouldNmi = false;
-//                this.cpu.doIrq();
-            } else if (this.shouldIrq && !this.cpu.flag_i) {
+            if (this.cpu.cycles >= nmiCycles) {
+                this.nmiCounter++;
+                nmiCycles += CyclesPerNMI;
+                if (!(this.nmiCounter & 0x01)) {
+                    this.adjustTime();
+                }
+                if (!this.encounterIRQClock() || (this.nmiCounter & 0x1)) {
+                    this.ram[0x3D] = 0;
+                } else {
+                    this.ram[0x3D] = 0x20;
+                    this.mayClockFlags &= 0xFD;
+                }
+                this.shouldIrq = true;
+            }
+            if (this.shouldIrq && !this.cpu.flag_i) {
                 this.cpu.irq = 0;
                 this.shouldIrq = false;
                 this.cpu.doIrq();
             }
             this._instCount ++;
-            if (this.cpu.cycles >= nmiCycles) {
-                this.nmiCounter++;
-                nmiCycles += CyclesPerNMI;
-//                this.shouldNmi = true;
-            }
             if (this.cpu.cycles >= clockCycles) {
                 this.clockCounter ++;
                 this.clockRecords[4] ++;
