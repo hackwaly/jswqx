@@ -279,7 +279,7 @@ var $TAX = 'this.reg_x = this.reg_a;' + $SETNZ('this.reg_x');
 var $TAY = 'this.reg_y = this.reg_a;' + $SETNZ('this.reg_y');
 var $TXA = 'this.reg_a = this.reg_x;' + $SETNZ('this.reg_a');
 var $TYA = 'this.reg_a = this.reg_y;' + $SETNZ('this.reg_a');
-var $TSX = 'this.reg_x = (this.reg_sp & 0xFF);' + $SETNZ('this.reg_x');
+var $TSX = 'this.reg_x = (this.reg_sp & 0xFF);';
 var $TXS = 'this.reg_sp = (this.reg_x | 0x100);';
 
 
