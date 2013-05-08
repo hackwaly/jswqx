@@ -137,13 +137,14 @@ var $ROLA = 'this._tmp1 = (this.reg_a << 1) | this.flag_c;' +
     'this.reg_a = (this._tmp1 & 0xFF);' +
     $SETNZ('this.reg_a');
 var $ROR = 'this._tmp1 = ' + $READ + ';' +
-    'this._tmp2 = (this._tmp1 >> 1) | (this.flag_c << 7);' +
+    'this.tmp2 = this.flag_c << 7;' +
     'this.flag_c = (this._tmp1 & 0x01);' +
+    'this._tmp2 = (this._tmp1 >> 1) | this.tmp2;' +
     $SETNZ('this._tmp2') +
     $WRITE('this._tmp2');
-var $RORA = 'this._tmp1 = (this.reg_a >> 1) | (this.flag_c << 7);' +
+var $RORA = 'this.tmp1 = this.flag_c << 7;' +
     'this.flag_c = (this.reg_a & 0x01);' +
-    'this.reg_a = this._tmp1;' +
+    'this.reg_a = (this.reg_a >> 1) | this.tmp1;' +
     $SETNZ('this.reg_a');
 
 var $BIT = 'this._tmp1 = ' + $READ + ';' +
