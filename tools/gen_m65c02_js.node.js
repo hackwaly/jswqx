@@ -84,6 +84,7 @@ var $ADC = 'this._tmp1 = ' + $READ + ';' +
         'this._tmp2 %= 100;' +
         'this.reg_a = ' + $TO_BCD('this._tmp2') + ';' +
         $SETNZ('this.reg_a') +
+        'this.cycles++' +
     '} else {' +
         'this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;' +
         'this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;' +
