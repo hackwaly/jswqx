@@ -713,10 +713,9 @@ M65C02Context.prototype.execute = function() {
                                     this.reg_pc = (this.reg_pc + 1) & 0xFFFF;
                                     this._tmp1 = (this.io_read_map[this._addr] ? this.io_read(this._addr) : this.memmap[this._addr >> 13][this._addr & 0x1FFF]);
                                     this.flag_c = this._tmp1 & 0x01;
+                                    this.flag_z = (this._tmp1 ^ 0x01) ? 1 : 0;
                                     this.flag_n = 0;
                                     this._tmp1 >>= 1;
-                                    this.flag_n = (this._tmp1 & 0x80) >> 7;
-                                    this.flag_z = (this._tmp1 & 0xFF) ? 0 : 1;
                                     if (this.io_write_map[this._addr]) {
                                         this.io_write(this._addr, this._tmp1);
                                     } else {
@@ -786,10 +785,9 @@ M65C02Context.prototype.execute = function() {
                                     this.reg_pc = (this.reg_pc + 2) & 0xFFFF;
                                     this._tmp1 = (this.io_read_map[this._addr] ? this.io_read(this._addr) : this.memmap[this._addr >> 13][this._addr & 0x1FFF]);
                                     this.flag_c = this._tmp1 & 0x01;
+                                    this.flag_z = (this._tmp1 ^ 0x01) ? 1 : 0;
                                     this.flag_n = 0;
                                     this._tmp1 >>= 1;
-                                    this.flag_n = (this._tmp1 & 0x80) >> 7;
-                                    this.flag_z = (this._tmp1 & 0xFF) ? 0 : 1;
                                     if (this.io_write_map[this._addr]) {
                                         this.io_write(this._addr, this._tmp1);
                                     } else {
@@ -862,10 +860,9 @@ M65C02Context.prototype.execute = function() {
                                     this.reg_pc = (this.reg_pc + 1) & 0xFFFF;
                                     this._tmp1 = (this.io_read_map[this._addr] ? this.io_read(this._addr) : this.memmap[this._addr >> 13][this._addr & 0x1FFF]);
                                     this.flag_c = this._tmp1 & 0x01;
+                                    this.flag_z = (this._tmp1 ^ 0x01) ? 1 : 0;
                                     this.flag_n = 0;
                                     this._tmp1 >>= 1;
-                                    this.flag_n = (this._tmp1 & 0x80) >> 7;
-                                    this.flag_z = (this._tmp1 & 0xFF) ? 0 : 1;
                                     if (this.io_write_map[this._addr]) {
                                         this.io_write(this._addr, this._tmp1);
                                     } else {
@@ -929,10 +926,9 @@ M65C02Context.prototype.execute = function() {
                                     this.reg_pc = (this.reg_pc + 2) & 0xFFFF;
                                     this._tmp1 = (this.io_read_map[this._addr] ? this.io_read(this._addr) : this.memmap[this._addr >> 13][this._addr & 0x1FFF]);
                                     this.flag_c = this._tmp1 & 0x01;
+                                    this.flag_z = (this._tmp1 ^ 0x01) ? 1 : 0;
                                     this.flag_n = 0;
                                     this._tmp1 >>= 1;
-                                    this.flag_n = (this._tmp1 & 0x80) >> 7;
-                                    this.flag_z = (this._tmp1 & 0xFF) ? 0 : 1;
                                     if (this.io_write_map[this._addr]) {
                                         this.io_write(this._addr, this._tmp1);
                                     } else {
@@ -974,6 +970,7 @@ M65C02Context.prototype.execute = function() {
                                         this.reg_a = ((((this._tmp2 / 10) % 10) << 4) | (this._tmp2 % 10));
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
+                                        this.cycles++
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
@@ -1014,6 +1011,7 @@ M65C02Context.prototype.execute = function() {
                                         this.reg_a = ((((this._tmp2 / 10) % 10) << 4) | (this._tmp2 % 10));
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
+                                        this.cycles++
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
@@ -1029,8 +1027,9 @@ M65C02Context.prototype.execute = function() {
                                     this._addr = this.memmap[this.reg_pc >> 13][this.reg_pc & 0x1FFF];
                                     this.reg_pc = (this.reg_pc + 1) & 0xFFFF;
                                     this._tmp1 = (this.io_read_map[this._addr] ? this.io_read(this._addr) : this.memmap[this._addr >> 13][this._addr & 0x1FFF]);
-                                    this._tmp2 = (this._tmp1 >> 1) | (this.flag_c << 7);
+                                    this.tmp2 = this.flag_c << 7;
                                     this.flag_c = (this._tmp1 & 0x01);
+                                    this._tmp2 = (this._tmp1 >> 1) | this.tmp2;
                                     this.flag_n = (this._tmp2 & 0x80) >> 7;
                                     this.flag_z = (this._tmp2 & 0xFF) ? 0 : 1;
                                     if (this.io_write_map[this._addr]) {
@@ -1073,6 +1072,7 @@ M65C02Context.prototype.execute = function() {
                                         this.reg_a = ((((this._tmp2 / 10) % 10) << 4) | (this._tmp2 % 10));
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
+                                        this.cycles++
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
@@ -1085,9 +1085,9 @@ M65C02Context.prototype.execute = function() {
                                 }
                             } else {
                                 if (this._code < 0x6B) {
-                                    this._tmp1 = (this.reg_a >> 1) | (this.flag_c << 7);
+                                    this.tmp1 = this.flag_c << 7;
                                     this.flag_c = (this.reg_a & 0x01);
-                                    this.reg_a = this._tmp1;
+                                    this.reg_a = (this.reg_a >> 1) | this.tmp1;
                                     this.flag_n = (this.reg_a & 0x80) >> 7;
                                     this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
                                     this.cycles += 2;
@@ -1114,6 +1114,7 @@ M65C02Context.prototype.execute = function() {
                                         this.reg_a = ((((this._tmp2 / 10) % 10) << 4) | (this._tmp2 % 10));
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
+                                        this.cycles++
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
@@ -1129,8 +1130,9 @@ M65C02Context.prototype.execute = function() {
                                     this._addr = (((this.reg_pc < 0xFFFF ? this.memmap[(this.reg_pc + 1) >> 13][(this.reg_pc + 1) & 0x1FFF] : this.ram[0]) << 8) | this.memmap[this.reg_pc >> 13][this.reg_pc & 0x1FFF]);
                                     this.reg_pc = (this.reg_pc + 2) & 0xFFFF;
                                     this._tmp1 = (this.io_read_map[this._addr] ? this.io_read(this._addr) : this.memmap[this._addr >> 13][this._addr & 0x1FFF]);
-                                    this._tmp2 = (this._tmp1 >> 1) | (this.flag_c << 7);
+                                    this.tmp2 = this.flag_c << 7;
                                     this.flag_c = (this._tmp1 & 0x01);
+                                    this._tmp2 = (this._tmp1 >> 1) | this.tmp2;
                                     this.flag_n = (this._tmp2 & 0x80) >> 7;
                                     this.flag_z = (this._tmp2 & 0xFF) ? 0 : 1;
                                     if (this.io_write_map[this._addr]) {
@@ -1176,6 +1178,7 @@ M65C02Context.prototype.execute = function() {
                                         this.reg_a = ((((this._tmp2 / 10) % 10) << 4) | (this._tmp2 % 10));
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
+                                        this.cycles++
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
@@ -1199,6 +1202,7 @@ M65C02Context.prototype.execute = function() {
                                         this.reg_a = ((((this._tmp2 / 10) % 10) << 4) | (this._tmp2 % 10));
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
+                                        this.cycles++
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
@@ -1234,6 +1238,7 @@ M65C02Context.prototype.execute = function() {
                                         this.reg_a = ((((this._tmp2 / 10) % 10) << 4) | (this._tmp2 % 10));
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
+                                        this.cycles++
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
@@ -1249,8 +1254,9 @@ M65C02Context.prototype.execute = function() {
                                     this._addr = (this.memmap[this.reg_pc >> 13][this.reg_pc & 0x1FFF] + this.reg_x) & 0xFF;
                                     this.reg_pc = (this.reg_pc + 1) & 0xFFFF;
                                     this._tmp1 = (this.io_read_map[this._addr] ? this.io_read(this._addr) : this.memmap[this._addr >> 13][this._addr & 0x1FFF]);
-                                    this._tmp2 = (this._tmp1 >> 1) | (this.flag_c << 7);
+                                    this.tmp2 = this.flag_c << 7;
                                     this.flag_c = (this._tmp1 & 0x01);
+                                    this._tmp2 = (this._tmp1 >> 1) | this.tmp2;
                                     this.flag_n = (this._tmp2 & 0x80) >> 7;
                                     this.flag_z = (this._tmp2 & 0xFF) ? 0 : 1;
                                     if (this.io_write_map[this._addr]) {
@@ -1291,6 +1297,7 @@ M65C02Context.prototype.execute = function() {
                                         this.reg_a = ((((this._tmp2 / 10) % 10) << 4) | (this._tmp2 % 10));
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
+                                        this.cycles++
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
@@ -1330,6 +1337,7 @@ M65C02Context.prototype.execute = function() {
                                         this.reg_a = ((((this._tmp2 / 10) % 10) << 4) | (this._tmp2 % 10));
                                         this.flag_n = (this.reg_a & 0x80) >> 7;
                                         this.flag_z = (this.reg_a & 0xFF) ? 0 : 1;
+                                        this.cycles++
                                     } else {
                                         this._tmp2 = this.reg_a + this._tmp1 + this.flag_c;
                                         this.flag_c = (this._tmp2 > 0xFF) ? 1 : 0;
@@ -1345,8 +1353,9 @@ M65C02Context.prototype.execute = function() {
                                     this._addr = ((((this.reg_pc < 0xFFFF ? this.memmap[(this.reg_pc + 1) >> 13][(this.reg_pc + 1) & 0x1FFF] : this.ram[0]) << 8) | this.memmap[this.reg_pc >> 13][this.reg_pc & 0x1FFF]) + this.reg_x) & 0xFFFF;
                                     this.reg_pc = (this.reg_pc + 2) & 0xFFFF;
                                     this._tmp1 = (this.io_read_map[this._addr] ? this.io_read(this._addr) : this.memmap[this._addr >> 13][this._addr & 0x1FFF]);
-                                    this._tmp2 = (this._tmp1 >> 1) | (this.flag_c << 7);
+                                    this.tmp2 = this.flag_c << 7;
                                     this.flag_c = (this._tmp1 & 0x01);
+                                    this._tmp2 = (this._tmp1 >> 1) | this.tmp2;
                                     this.flag_n = (this._tmp2 & 0x80) >> 7;
                                     this.flag_z = (this._tmp2 & 0xFF) ? 0 : 1;
                                     if (this.io_write_map[this._addr]) {
