@@ -169,7 +169,7 @@ var Wqx = (function (){
         this.memmap[mapA000] = getByteArray(this.ram, 0xA000, 0x2000);
         this.memmap[mapC000] = getByteArray(this.ram, 0xC000, 0x2000);
         this.memmap[mapE000] = getByteArray(this.ram, 0xE000, 0x2000);
-        this.ramNorBank1 = new Uint8Array(0x2000);
+        this.ramRomBank1 = new Uint8Array(0x2000);
         this.fillC000BIOSBank(this.volume0array);
         this.memmap[mapC000] = getByteArray(this.bbsbankheader[0], 0, 0x2000);
         this.may4000ptr = this.volume0array[0];
@@ -204,7 +204,7 @@ var Wqx = (function (){
 
     Wqx.prototype.fillC000BIOSBank = function (volume_array){
         this.bbsbankheader[0] = getByteArray(volume_array[0], 0, 0x2000);
-        this.bbsbankheader[1] = this.ramNorBank1;
+        this.bbsbankheader[1] = this.ramRomBank1;
         this.bbsbankheader[2] = getByteArray(volume_array[0], 0x4000, 0x2000);
         this.bbsbankheader[3] = getByteArray(volume_array[0], 0x6000, 0x2000);
         // 4567, 89AB, CDEF take first 4page 0000~7FFF in BROM
@@ -612,7 +612,7 @@ var Wqx = (function (){
 //        console.log('writeGE4000: ' + addr.toString(16) + ', ' + value.toString(16));
         var buffer = this.memmap[addr >> 13].buffer;
         // writable bank.
-        if (buffer === this.ram || buffer === this.ramNorBank1) {
+        if (buffer === this.ram || buffer === this.ramRomBank1) {
             this.memmap[addr >> 13][addr & 0x1FFF] = value;
             return;
         }
