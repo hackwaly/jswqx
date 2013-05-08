@@ -120,9 +120,9 @@ var $ASLA = 'this._tmp1 = this.reg_a << 1;' +
     'this.reg_a = (this._tmp1 & 0xFF);';
 var $LSR = 'this._tmp1 = ' + $READ + ';' +
     'this.flag_c = this._tmp1 & 0x01;' +
+    'this.flag_z = this._tmp1 ^ 0x01;' +
     'this.flag_n = 0;' +
     'this._tmp1 >>= 1;' +
-    $SETNZ('this._tmp1') +
     $WRITE('this._tmp1');
 var $LSRA = 'this.flag_c = (this.reg_a & 0x01);' +
     'this.flag_n = 0;' +
