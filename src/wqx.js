@@ -308,7 +308,7 @@ var Wqx = (function (){
         return this.ram[io05_clock_ctrl]; // follow rulz by GGV
     };
     Wqx.prototype.read06StopTimer1 = function (){
-        console.log('read06StopTimer1');
+        console.log('read06StopTimer1: ' + this.ram[io04_general_ctrl]);
         //todo
         return this.ram[io06_lcd_config];
     };
@@ -317,7 +317,7 @@ var Wqx = (function (){
     };
     Wqx.prototype.read3BUnknown = function (){
         if (!(this.ram[0x3d] & 0x03)) {
-            return 0 & 0xFE; // unknown & 0xFE.
+            return this.clockRecords[0x3B] & 0xFE;
         }
     };
     Wqx.prototype.read3FClock = function (){
@@ -497,7 +497,7 @@ var Wqx = (function (){
                 this.memmap[mapE000] = getByteArray(this.volume0array[0], 0x2000, 0x2000);
             }
 
-            this.memmap[map2000] = this.ram2000_4000;
+            this.memmap[map2000] = this.ram4000_6000;
             var roabbs = this.ram[io0A_roa];
             if (!(roabbs & 0x04)) {
                 this.memmap[map2000] = this.ram2000_4000;

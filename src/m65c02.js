@@ -1907,8 +1907,6 @@ M65C02Context.prototype.execute = function() {
                             } else {
                                 if (this._code < 0xBB) {
                                     this.reg_x = (this.reg_sp & 0xFF);
-                                    this.flag_n = (this.reg_x & 0x80) >> 7;
-                                    this.flag_z = (this.reg_x & 0xFF) ? 0 : 1;
                                     this.cycles += 2;
                                 } else {
                                     this.cycles += 1;
