@@ -279,7 +279,7 @@ var $TAX = 'this.reg_x = this.reg_a;' + $SETNZ('this.reg_x');
 var $TAY = 'this.reg_y = this.reg_a;' + $SETNZ('this.reg_y');
 var $TXA = 'this.reg_a = this.reg_x;' + $SETNZ('this.reg_a');
 var $TYA = 'this.reg_a = this.reg_y;' + $SETNZ('this.reg_a');
-var $TSX = 'this.reg_x = (this.reg_sp & 0xFF);';
+var $TSX = 'this.reg_x = (this.reg_sp & 0xFF);' + $SETNZ('this.reg_x');
 var $TXS = 'this.reg_sp = (this.reg_x | 0x100);';
 
 
@@ -326,7 +326,7 @@ var $NMI = '' +
     $CYC(7);
 
 
-var INSTRUCTIONS = {};
+var INSTRUCTIONS = []
 INSTRUCTIONS[0x00] = [       $BRK,          $CYC(7)].join('');
 INSTRUCTIONS[0x01] = [       $INDX,$ORA,    $CYC(6)].join('');
 INSTRUCTIONS[0x02] = [       $INVALID2,     $CYC(2)].join('');
@@ -602,6 +602,15 @@ function $BINARY_IF_INSTRUCTIONS(left, right){
             $BINARY_IF_INSTRUCTIONS(middle, right) +
         '}';
 }
+function $SWITCH_INSTRUCTIONS(){
+    var temp = INSTRUCTIONS.map(function (code, index){
+        return 'case 0x' + index.toString(16) + ': ' + code + 'break;';
+    });
+    return '' +
+        'switch (this._code) {' +
+            temp.join('\n') +
+        '}';
+}
 
 function $M65C02(){
     return '' +
@@ -662,7 +671,7 @@ function $M65C02(){
         'M65C02Context.prototype.execute = function (){' +
             'this._code = ' + $BYTE('this.reg_pc') + ';' +
             'this.reg_pc = (this.reg_pc + 1) & 0xFFFF;' +
-            $BINARY_IF_INSTRUCTIONS(0, 0xFF) +
+            $SWITCH_INSTRUCTIONS() +
             'if (!this.stp) {' +
                 'if (!this.nmi) { ' + $NMI + ' }' +
                 'if (!this.irq) { ' + $IRQ + ' }' +

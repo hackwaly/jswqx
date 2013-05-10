@@ -353,6 +353,9 @@ var Wqx = (function (){
         case 0x3F:
             return this.write3FClock(value);
         }
+        if (addr >= this.lcdbuffaddr && addr < this.lcdbuffaddr + 1600) {
+            this.updateLCD(addr, value);
+        }
         if (addr >= 0x4000) {
             return this.writeGE4000(addr, value);
         }
@@ -400,11 +403,17 @@ var Wqx = (function (){
         }
         this.ram[io05_clock_ctrl] = value;
     };
+    Wqx.prototype.setLcdStartAddr = function (addr){
+        this.lcdbuffaddr = addr;
+        for (var i=0; i<1600; i++) {
+            this.io_write_map[this.lcdbuffaddr+i] = true;
+        }
+        console.log('lcdAddr: ' + this.lcdbuffaddr);
+    };
     Wqx.prototype.write06LCDStartAddr = function (value){
         console.log('write06LCDStartAddr: ' + value);
         if (this.lcdbuffaddr == null) {
-            this.lcdbuffaddr = ((this.ram[io0C_lcd_config] & 0x03) << 12) | (value << 4);
-            console.log('lcdAddr: ' + this.lcdbuffaddr);
+            this.setLcdStartAddr(((this.ram[io0C_lcd_config] & 0x03) << 12) | (value << 4));
         }
         this.ram[io06_lcd_config] = value;
         // SPDC1016
@@ -497,10 +506,14 @@ var Wqx = (function (){
                 this.memmap[mapE000] = getByteArray(this.volume0array[0], 0x2000, 0x2000);
             }
 
-            this.memmap[map2000] = this.ram4000_6000;
+            var page2000 = this.ram4000_6000;
             var roabbs = this.ram[io0A_roa];
             if (!(roabbs & 0x04)) {
-                this.memmap[map2000] = this.ram2000_4000;
+                page2000 = this.ram2000_4000;
+            }
+            if (this.memmap[map2000] !== page2000) {
+                this.memmap[map2000] = page2000;
+//                this.canvasCtx.clearRect(0, 0, 160, 80);
             }
             this.memmap[mapC000] = this.bbsbankheader[roabbs & 0x0F];
             this.switch4000ToBFFF();
@@ -614,6 +627,9 @@ var Wqx = (function (){
         // writable bank.
         if (buffer === this.ram || buffer === this.ramRomBank1) {
             this.memmap[addr >> 13][addr & 0x1FFF] = value;
+            if (buffer === this.ramRomBank1) {
+                console.log('write to ramRomBank1');
+            }
             return;
         }
         if (addr >= 0xE000) {
@@ -791,38 +807,70 @@ var Wqx = (function (){
         this.resetCpu();
     };
 
-    Wqx.prototype.updateLCD = function (){
-        var lcdBuffer = getByteArray(this.ram, this.lcdbuffaddr, 160*80/8);
-//        var imageData = this.canvasCtx.createImageData(160, 80);
+    Wqx.prototype.updateLCD = function (addr, value){
+//        var lcdBuffer = getByteArray(this.ram, this.lcdbuffaddr, 160*80/8);
+//        this.canvasCtx.clearRect(0, 0, 160, 80);
 //        for (var i=0; i<80; i++) {
 //            for (var j=0; j<20; j++) {
-//                var p = (160 * i + 8 * j) * 4;
+//                var p = j * 8;
 //                var pixelsByte = lcdBuffer[20*i+j];
-//                imageData.data[p+3] = (pixelsByte & 0x80) ? 255 : 0;
-//                imageData.data[p+7] = (pixelsByte & 0x40) ? 255 : 0;
-//                imageData.data[p+11] = (pixelsByte & 0x20) ? 255 : 0;
-//                imageData.data[p+15] = (pixelsByte & 0x10) ? 255 : 0;
-//                imageData.data[p+19] = (pixelsByte & 0x08) ? 255 : 0;
-//                imageData.data[p+23] = (pixelsByte & 0x04) ? 255 : 0;
-//                imageData.data[p+27] = (pixelsByte & 0x02) ? 255 : 0;
-//                imageData.data[p+31] = (pixelsByte & 0x01) ? 255 : 0;
+//                if (pixelsByte & 0x80) if (j > 0) this.canvasCtx.fillRect(p + 0, i, 1, 1);
+//                if (pixelsByte & 0x40) this.canvasCtx.fillRect(p + 1, i, 1, 1);
+//                if (pixelsByte & 0x20) this.canvasCtx.fillRect(p + 2, i, 1, 1);
+//                if (pixelsByte & 0x10) this.canvasCtx.fillRect(p + 3, i, 1, 1);
+//                if (pixelsByte & 0x08) this.canvasCtx.fillRect(p + 4, i, 1, 1);
+//                if (pixelsByte & 0x04) this.canvasCtx.fillRect(p + 5, i, 1, 1);
+//                if (pixelsByte & 0x02) this.canvasCtx.fillRect(p + 6, i, 1, 1);
+//                if (pixelsByte & 0x01) this.canvasCtx.fillRect(p + 7, i, 1, 1);
 //            }
 //        }
-//        this.canvasCtx.putImageData(imageData, 0, 0);
-        this.canvasCtx.clearRect(0, 0, 160, 80);
-        for (var i=0; i<80; i++) {
-            for (var j=0; j<20; j++) {
-                var p = j * 8;
-                var pixelsByte = lcdBuffer[20*i+j];
-                if (pixelsByte & 0x80) if (j > 0) this.canvasCtx.fillRect(p + 0, i, 1, 1);
-                if (pixelsByte & 0x40) this.canvasCtx.fillRect(p + 1, i, 1, 1);
-                if (pixelsByte & 0x20) this.canvasCtx.fillRect(p + 2, i, 1, 1);
-                if (pixelsByte & 0x10) this.canvasCtx.fillRect(p + 3, i, 1, 1);
-                if (pixelsByte & 0x08) this.canvasCtx.fillRect(p + 4, i, 1, 1);
-                if (pixelsByte & 0x04) this.canvasCtx.fillRect(p + 5, i, 1, 1);
-                if (pixelsByte & 0x02) this.canvasCtx.fillRect(p + 6, i, 1, 1);
-                if (pixelsByte & 0x01) this.canvasCtx.fillRect(p + 7, i, 1, 1);
+        var offset = addr - this.lcdbuffaddr;
+        var row = Math.floor(offset / 20);
+        var col = offset % 20;
+        var p = col * 8;
+        if (value & 0x80) {
+            if (col > 0) {
+                this.canvasCtx.fillRect(p + 0, row, 1, 1);
             }
+        } else {
+            if (col > 0) {
+                this.canvasCtx.clearRect(p + 0, row, 1, 1);
+            }
+        }
+        if (value & 0x40) {
+            this.canvasCtx.fillRect(p + 1, row, 1, 1);
+        } else {
+            this.canvasCtx.clearRect(p + 1, row, 1, 1);
+        }
+        if (value & 0x20) {
+            this.canvasCtx.fillRect(p + 2, row, 1, 1);
+        } else {
+            this.canvasCtx.clearRect(p + 2, row, 1, 1);
+        }
+        if (value & 0x10) {
+            this.canvasCtx.fillRect(p + 3, row, 1, 1);
+        } else {
+            this.canvasCtx.clearRect(p + 3, row, 1, 1);
+        }
+        if (value & 0x08) {
+            this.canvasCtx.fillRect(p + 4, row, 1, 1);
+        } else {
+            this.canvasCtx.clearRect(p + 4, row, 1, 1);
+        }
+        if (value & 0x04) {
+            this.canvasCtx.fillRect(p + 5, row, 1, 1);
+        } else {
+            this.canvasCtx.clearRect(p + 5, row, 1, 1);
+        }
+        if (value & 0x02) {
+            this.canvasCtx.fillRect(p + 6, row, 1, 1);
+        } else {
+            this.canvasCtx.clearRect(p + 6, row, 1, 1);
+        }
+        if (value & 0x01) {
+            this.canvasCtx.fillRect(p + 7, row, 1, 1);
+        } else {
+            this.canvasCtx.clearRect(p + 7, row, 1, 1);
         }
     };
 
@@ -856,10 +904,14 @@ var Wqx = (function (){
         this._instCount = 0;
         this.clockRecords = new Uint8Array(80);
         if (!this.frameTimer) {
-            this.frameTimer = setInterval(this.frame.bind(this),
-                1000 / FrameRate);
+            this.frameTimer = setInterval(this.frame.bind(this), 1000 / FrameRate);
         }
     };
+
+//    Wqx.prototype._loop = function (){
+//        this.frame();
+//        this.frameTimer = requestAnimationFrame(this._loop.bind(this), null);
+//    };
 
     Wqx.prototype.stop = function (){
         clearInterval(this.frameTimer);
@@ -957,7 +1009,6 @@ var Wqx = (function (){
             this.totalInsts++;
         }
         document.title = (this.frameCounter);
-        this.updateLCD();
         this.frameCounter++;
     };
 
