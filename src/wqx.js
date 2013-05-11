@@ -345,7 +345,7 @@ var Wqx = (function (){
         case 0x0D:
             return this.write0DVolumeIDLCDSegCtrl(value);
         case 0x0F:
-            return this.writeZeroPageBankswitch(value);
+            return this.write0FZeroPageBankswitch(value);
         case 0x20:
             return this.write20JG(value);
         case 0x23:
@@ -521,8 +521,8 @@ var Wqx = (function (){
         this.ram[io0D_volumeid] = value;
 //        this._dbg_logMemmap();
     };
-    Wqx.prototype.writeZeroPageBankswitch = function (value){
-//        console.log('writeZeroPageBankswitch: ' + value);
+    Wqx.prototype.write0FZeroPageBankswitch = function (value){
+//        console.log('write0FZeroPageBankswitch: ' + value);
         var oldzpbank = this.ram[io0F_zp_bsw] & 0x07;
         var newzpbank = (value & 0x07);
         var newzpptr = this.getZeroPagePointer(newzpbank);

@@ -326,7 +326,7 @@ var $NMI = '' +
     $CYC(7);
 
 
-var INSTRUCTIONS = []
+var INSTRUCTIONS = [];
 INSTRUCTIONS[0x00] = [       $BRK,          $CYC(7)].join('');
 INSTRUCTIONS[0x01] = [       $INDX,$ORA,    $CYC(6)].join('');
 INSTRUCTIONS[0x02] = [       $INVALID2,     $CYC(2)].join('');
@@ -612,6 +612,15 @@ function $SWITCH_INSTRUCTIONS(){
         '}';
 }
 
+function $LOOKUP_TABLE_INSTRUCTIONS(){
+    var temp = INSTRUCTIONS.map(function (code, op){
+        return 'function op' + $HEX(op, 2).slice(2) + '(this_){' + code + '}'
+    }).join(',');
+    temp = temp.replace(/this\./g, 'this_.');
+    return '' +
+        'M65C02Context.prototype.op_func_tbl = [' + temp + '];';
+}
+
 function $M65C02(){
     return '' +
         'function M65C02Context(){' +
@@ -644,6 +653,7 @@ function $M65C02(){
             'this._addr = 0;' +
             'this._tmp1 = 0;' +
             'this._tmp2 = 0;' +
+            'this._counters = new Uint32Array(0x100);' +
         '}' +
         'M65C02Context.prototype.get_reg_ps = function (){' +
             'return (' +
@@ -668,14 +678,11 @@ function $M65C02(){
             'this.flag_n = (ps & 0x80) >> 7;' +
             'return ps;' +
         '};' +
+        $LOOKUP_TABLE_INSTRUCTIONS() +
         'M65C02Context.prototype.execute = function (){' +
             'this._code = ' + $BYTE('this.reg_pc') + ';' +
             'this.reg_pc = (this.reg_pc + 1) & 0xFFFF;' +
-            $SWITCH_INSTRUCTIONS() +
-            'if (!this.stp) {' +
-                'if (!this.nmi) { ' + $NMI + ' }' +
-                'if (!this.irq) { ' + $IRQ + ' }' +
-            '}' +
+            'this.op_func_tbl[this._code](this);' +
         '};' +
         'M65C02Context.prototype.doIrq = function (){' +
             'if (!this.stp) {' +
