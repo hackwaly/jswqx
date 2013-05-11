@@ -148,10 +148,10 @@ var $RORA = 'this.tmp1 = this.flag_c << 7;' +
     $SETNZ('this.reg_a');
 
 var $BIT = 'this._tmp1 = ' + $READ + ';' +
-    'this.flag_z = (this.reg_a & this._tmp1) ? 0 : 1;' +
+    'this.flag_z = !(this.reg_a & this._tmp1) | 0;' +
     'this.flag_n = (this._tmp1 & 0x80) >> 7;' +
     'this.flag_v = (this._tmp1 & 0x40) >> 6;';
-var $BITI = 'this.flag_z = (this.reg_a & ' + $READ + ') ? 0 : 1;';
+var $BITI = 'this.flag_z = !(this.reg_a & ' + $READ + ') | 0;';
 
 var $BBS0 = 'if (  ' + $READ +' & 0x01 ) { this.reg_pc = (this.reg_pc + this._tmp2) & 0xFFFF; this.cycles++; }';
 var $BBS1 = 'if (  ' + $READ +' & 0x02 ) { this.reg_pc = (this.reg_pc + this._tmp2) & 0xFFFF; this.cycles++; }';
