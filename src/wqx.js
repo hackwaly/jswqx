@@ -50,8 +50,8 @@ var Wqx = (function (){
     var mapC000 = 6;
     var mapE000 = 7;
 
-    var SPDC1016Frequency = 3686400;
-    var FrameRate = 40;
+    var SPDC1016Frequency = 5000000;
+    var FrameRate = 50;
     var CyclesPerFrame = SPDC1016Frequency / FrameRate;
     var CyclesPerNMI = SPDC1016Frequency / 2;
     var CyclesPer10Ms = SPDC1016Frequency / 100;
