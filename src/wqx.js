@@ -354,7 +354,7 @@ var Wqx = (function (){
             return this.write3FClock(value);
         }
         if (addr >= this.lcdbuffaddr && addr < this.lcdbuffaddr + 1600) {
-            this.updateLCD(addr, value);
+            return this.updateLCD(addr, value);
         }
         if (addr >= 0x4000) {
             return this.writeGE4000(addr, value);
@@ -825,53 +825,73 @@ var Wqx = (function (){
 //            }
 //        }
         var offset = addr - this.lcdbuffaddr;
+        var oldValue = this.ram[addr];
         var row = Math.floor(offset / 20);
         var col = offset % 20;
         var p = col * 8;
-        if (value & 0x80) {
-            if (col > 0) {
-                this.canvasCtx.fillRect(p + 0, row, 1, 1);
+        var changed = oldValue ^ value;
+
+        if (changed & 0x80) {
+            if (value & 0x80) {
+                if (col > 0) {
+                    this.canvasCtx.fillRect(p + 0, row, 1, 1);
+                }
+            } else {
+                if (col > 0) {
+                    this.canvasCtx.clearRect(p + 0, row, 1, 1);
+                }
             }
-        } else {
-            if (col > 0) {
-                this.canvasCtx.clearRect(p + 0, row, 1, 1);
+        }
+        if (changed & 0x40) {
+            if (value & 0x40) {
+                this.canvasCtx.fillRect(p + 1, row, 1, 1);
+            } else {
+                this.canvasCtx.clearRect(p + 1, row, 1, 1);
             }
         }
-        if (value & 0x40) {
-            this.canvasCtx.fillRect(p + 1, row, 1, 1);
-        } else {
-            this.canvasCtx.clearRect(p + 1, row, 1, 1);
+        if (changed & 0x20) {
+            if (value & 0x20) {
+                this.canvasCtx.fillRect(p + 2, row, 1, 1);
+            } else {
+                this.canvasCtx.clearRect(p + 2, row, 1, 1);
+            }
         }
-        if (value & 0x20) {
-            this.canvasCtx.fillRect(p + 2, row, 1, 1);
-        } else {
-            this.canvasCtx.clearRect(p + 2, row, 1, 1);
+        if (changed & 0x10) {
+            if (value & 0x10) {
+                this.canvasCtx.fillRect(p + 3, row, 1, 1);
+            } else {
+                this.canvasCtx.clearRect(p + 3, row, 1, 1);
+            }
         }
-        if (value & 0x10) {
-            this.canvasCtx.fillRect(p + 3, row, 1, 1);
-        } else {
-            this.canvasCtx.clearRect(p + 3, row, 1, 1);
+        if (changed & 0x08) {
+            if (value & 0x08) {
+                this.canvasCtx.fillRect(p + 4, row, 1, 1);
+            } else {
+                this.canvasCtx.clearRect(p + 4, row, 1, 1);
+            }
         }
-        if (value & 0x08) {
-            this.canvasCtx.fillRect(p + 4, row, 1, 1);
-        } else {
-            this.canvasCtx.clearRect(p + 4, row, 1, 1);
+        if (changed & 0x04) {
+            if (value & 0x04) {
+                this.canvasCtx.fillRect(p + 5, row, 1, 1);
+            } else {
+                this.canvasCtx.clearRect(p + 5, row, 1, 1);
+            }
         }
-        if (value & 0x04) {
-            this.canvasCtx.fillRect(p + 5, row, 1, 1);
-        } else {
-            this.canvasCtx.clearRect(p + 5, row, 1, 1);
+        if (changed & 0x02) {
+            if (value & 0x02) {
+                this.canvasCtx.fillRect(p + 6, row, 1, 1);
+            } else {
+                this.canvasCtx.clearRect(p + 6, row, 1, 1);
+            }
         }
-        if (value & 0x02) {
-            this.canvasCtx.fillRect(p + 6, row, 1, 1);
-        } else {
-            this.canvasCtx.clearRect(p + 6, row, 1, 1);
+        if (changed & 0x01) {
+            if (value & 0x01) {
+                this.canvasCtx.fillRect(p + 7, row, 1, 1);
+            } else {
+                this.canvasCtx.clearRect(p + 7, row, 1, 1);
+            }
         }
-        if (value & 0x01) {
-            this.canvasCtx.fillRect(p + 7, row, 1, 1);
-        } else {
-            this.canvasCtx.clearRect(p + 7, row, 1, 1);
-        }
+        this.ram[addr] = value;
     };
 
     Wqx.prototype.mayClockFlags = 0;
