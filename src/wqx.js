@@ -54,7 +54,7 @@ var Wqx = (function (){
     var FrameRate = 50;
     var CyclesPerFrame = SPDC1016Frequency / FrameRate;
     var CyclesPerNMI = SPDC1016Frequency / 2;
-    var CyclesPer10Ms = SPDC1016Frequency / 100;
+    var CyclesPer4Ms = SPDC1016Frequency / 250;
 
     function memcpy(dest, src, length){
         for (var i=0; i<length; i++) {
@@ -947,7 +947,8 @@ var Wqx = (function (){
     Wqx.prototype.frame = function (){
         var frameCycles = CyclesPerFrame * (this.frameCounter + 1);
         var nmiCycles = CyclesPerNMI * (this.nmiCounter + 1);
-        var clockCycles = CyclesPer10Ms * (this.clockCounter + 1);
+        var clockCycles = CyclesPer4Ms * (this.clockCounter + 1);
+        var lastCycles = 0;
         while (this.cpu.cycles < frameCycles) {
 //            if (this._instCount === 2854234) {
 //                debugger;
@@ -1017,7 +1018,7 @@ var Wqx = (function (){
             if (this.cpu.cycles >= clockCycles) {
                 this.clockCounter ++;
                 this.clockRecords[4] ++;
-                clockCycles += CyclesPer10Ms;
+                clockCycles += CyclesPer4Ms;
                 this.ram[io01_int_enable] |= 0x08;
                 this.shouldIrq = true;
             }
@@ -1025,6 +1026,8 @@ var Wqx = (function (){
 //                this.clockRecords[4] ++;
 //                this.ram[io01_int_enable] |= 0x08;
 //                this.shouldIrq = true;
+//                console.log(this.cpu.cycles - lastCycles);
+//                lastCycles = this.cpu.cycles;
 //            }
             this.totalInsts++;
         }
