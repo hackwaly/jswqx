@@ -5,4 +5,4 @@ jswqx
 
 orginal: http://bbs.emsky.net/viewthread.php?tid=33474
 
-demo: https://jswqx.googlecode.com/git/index.html
+demo: https://hackwaly.com/jswqx/
