@@ -1,0 +1,5 @@
+node_modules/
+*.log
+verify/
+.temp/
+verify_ui.py

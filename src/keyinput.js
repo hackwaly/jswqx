@@ -49,6 +49,7 @@ var WqxKeyInput = function (){
         38: 'Up',
         34: 'PageDown',
         9: 'Tab',
+		16: 'Shift',
         229: 'Shift',
         20: 'CapsLock',
         27: 'Esc',
@@ -57,10 +58,22 @@ var WqxKeyInput = function (){
         187: 'Equals',
         37: 'Left',
         40: 'Down',
-        39: 'Right'
+        39: 'Right',
+        49: 'B',//1
+		50: 'N',//2
+		51: 'M',//3
+		52: 'G',//4
+		53: 'H',//5
+		54: 'J',//6
+		55: 'T',//7
+		56: 'Y',//8
+		57: 'U',//9
+		32: 'Equals',//space
+		8: 'F2',//bkspc
+        17: 'Esc'
     };
     var keyNameToKeypadMatrixIndex = {
-        'F12': 0x02,
+        'F12': 0x0F,
 
         'F5': 0x08,
         'F6': 0x09,
@@ -87,8 +100,7 @@ var WqxKeyInput = function (){
         'N': 0x35, // 46 N
         'M': 0x36, // 46 M
         'PageUp': 0x37, // 47 PgUp
-
-        'A': 0x28, // 30 A
+		'PgUp': 0x37, // 47 PgUp        'A': 0x28, // 30 A
         'S': 0x29, // 31 S
         'D': 0x2A, // 32 D
         'F': 0x2B, // 33 F
@@ -113,6 +125,7 @@ var WqxKeyInput = function (){
         'P': 0x1C, // 29 P
         'Enter': 0x1D, // 39 Enter
         'PageDown': 0x1E, // 49 PgDown
+		'PgDn': 0x1E, // 49 PgDown
         'Right': 0x1F, // 59 `->`
 
         'F1': 0x10, // 12 F1
@@ -120,14 +133,13 @@ var WqxKeyInput = function (){
         'F3': 0x12, // 14 F3
         'F4': 0x13 // 15 F4
     };
-    WqxKeyInput.prototype._keyDownOrUp = function (key, downOrUp){
-        var wqxKeyCode = keyNameToKeypadMatrixIndex[key];
-        if (wqxKeyCode) {
-            var col = wqxKeyCode >> 3;
-            var row = wqxKeyCode & 0x07;
-            this.wqx.keypadmatrix[row][col] = downOrUp ? 1 : 0;
-        }
-    };
+WqxKeyInput.prototype._keyDownOrUp = function (key, downOrUp){
+    var wqxKeyCode = keyNameToKeypadMatrixIndex[key];
+    if (wqxKeyCode !== undefined) {
+        // 改为调用setKey，走统一的位运算+唤醒逻辑
+        this.wqx.setKey(wqxKeyCode, downOrUp);
+    }
+};
     WqxKeyInput.prototype.keyDown = function (key){
         this._keyDownOrUp(key, true);
         this.onpress(key);

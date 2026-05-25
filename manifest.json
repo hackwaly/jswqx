@@ -1,0 +1,26 @@
+{
+  "name": "文曲星 NC1020 模拟器",
+  "short_name": "WQX NC1020",
+  "description": "基于 JavaScript 的文曲星 NC1020 模拟器",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d0d0f",
+  "theme_color": "#0a84ff",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "nc1020.png",
+      "sizes": "434x543",
+      "type": "image/png"
+    }
+  ]
+}

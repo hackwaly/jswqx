@@ -1,293 +1,1002 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <meta charset="utf-8"/>
-    <title>文曲星模拟器</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0a84ff">
+    <link rel="manifest" href="manifest.json">
+    <meta charset="utf-8" />
+    <title>文曲星模拟器 - NC1020</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/BrowserFS/2.0.0/browserfs.min.js"></script>
     <script src="src/m65c02.js"></script>
-    <!--<script src="refs/wqxsimlogs.js"></script>-->
     <script src="src/wqx.js"></script>
     <script src="src/keyinput.js"></script>
     <style>
-        #wqx {
-            width: 370px;
+        :root {
+            --bg-color: #0d0d0f;
+            --surface-color: rgba(28, 28, 30, 0.85);
+            --primary-color: #0a84ff;
+            --text-color: #ffffff;
+            --secondary-text: #98989d;
+            --accent-color: #ff453a;
+            --lcd-bg: #809a4e;
+            --device-shadow: 0 5px 20px rgb(41 144 229 / 30%), 0 5px 20px rgb(98 90 215 / 68%);
+            --drawer-bg: rgba(20, 20, 22, 0.95);
         }
-        #lcd {
+
+        [data-theme="light"] {
+            --bg-color: #f2f2f7;
+            --surface-color: rgba(255, 255, 255, 0.85);
+            --text-color: #000000;
+            --secondary-text: #8e8e93;
+            --drawer-bg: rgba(242, 242, 247, 0.95);
+            --device-shadow: 0 20px 50px rgb(0 0 0 / 52%);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 50% 30%, var(--surface-color) 0%, var(--bg-color) 100%);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        h1 {
+            color: var(--text-color);
+            margin: 20px 0 10px 0;
+            font-weight: 700;
+            font-size: 28px;
+            letter-spacing: -0.5px;
+            opacity: 0.9;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        #settings-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            width: 44px;
+            height: 44px;
+            padding: 10px;
+            border-radius: 50%;
+            background: var(--surface-color);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: transform 0.2s ease;
+        }
+        #settings-toggle:hover { transform: scale(1.05); }
+        #settings-toggle svg { width: 24px; height: 24px; fill: var(--text-color); }
+
+        #drawer {
+            position: fixed;
+            top: 0;
+            right: -320px;
+            width: 300px;
+            max-width: 85vw;
+            height: 100vh;
+            background: var(--drawer-bg);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            z-index: 1001;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.3);
+            transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            border-left: 1px solid rgba(255,255,255,0.05);
+        }
+        #drawer.open { right: 0; }
+
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            margin-top: env(safe-area-inset-top, 0);
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1;
+        }
+
+        #overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(2px);
+            z-index: 1000;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #overlay.show { display: block; opacity: 1; }
+
+        .drawer-section { display: flex; flex-direction: column; gap: 12px; }
+        .drawer-section h3 {
+            margin: 0;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--secondary-text);
+            font-weight: 600;
+        }
+
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .full-width { grid-column: span 2; }
+
+        button {
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        [data-theme="light"] button {
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 1), 0 0 5px rgba(255, 255, 255, 0.5);
+        }
+
+        button:hover:not(:disabled) {
+            background-color: rgba(128, 128, 128, 0.2);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        button:active:not(:disabled) {
+            background-color: rgba(128, 128, 128, 0.15);
+            transform: translateY(0);
+        }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        #flash_status {
+            font-size: 13px;
+            color: var(--secondary-text);
+            margin-left: 12px;
+            padding-left: 12px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 100px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #device-container {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 20px 0;
+            perspective: 2000px;
+            transition: all 0.3s ease;
+            min-height: 0;
+            box-sizing: border-box;
+        }
+
+        #device {
+            position: relative;
+            width: 434px;
+            height: 543px;
+            transform-origin: center center;
+            border-radius: 10px;
+            box-shadow: var(--device-shadow);
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #key {
+            width: 434px;
+            height: 543px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 20;
+            cursor: pointer;
+            pointer-events: auto;
+            image-rendering: high-quality;
+            border-radius: 10px;
+        }
+
+        #outScr {
+            position: absolute;
+            left: 15px;
+            top: 14px;
+            width: 376px;
+            height: 163px;
+            z-index: 10;
+            background-color: var(--lcd-bg);
+            overflow: hidden;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            box-shadow: inset 0 4px 12px rgba(0,0,0,0.6), inset 0 -1px 3px rgba(255,255,255,0.2);
+            transition: background-color 0.5s ease;
+        }
+
+        #scr {
             width: 320px;
             height: 160px;
-            background-color: #98fb98;
-            padding: 0 25px;
+            margin-left: 20.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background-image: linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px);
+            background-size: 2px 2px;
+            background-position: 0 0;
+            transform-origin: left;
         }
-        #keypad {
-            border: 1px solid gray;
-            border-radius: 5px;
-            padding: 5px 3px 5px 5px;
-            width: 360px;
-            height: 152px;
+
+        #lcd canvas {
+            width: 320px;
+            height: 160px;
+            image-rendering: pixelated;
+            mix-blend-mode: multiply;
+            opacity: 0.85;
+            display: block;
         }
-        #keypad>div {
-            height: 24px;
-            margin-bottom: 2px;
+
+        #info {
+            max-width: 600px;
+            width: 90%;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-top: 60px;
+            color: var(--secondary-text);
+            padding: 30px;
+            background: rgba(28, 28, 30, 0.5);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 60px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
-        .keypad_unit {
-            width: 32px;
-            height: 20px;
-            border-radius: 3px;
-            display: inline-block;
-            background-color: rgb(213, 233, 205);
-            border: 1px solid rgb(128, 208, 70);
-            margin-right: 2px;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -o-user-select: none;
-            cursor: pointer;
-        }
-        .keypad_unit.pressed {
-            background-color: rgb(192, 192, 192);
-            border-color: black;
-        }
-        .keypad_unit_label {
-            font-size: 12px;
-            line-height: 20px;
-            color: rgb(128, 208, 70);
-            text-align: center;
+        #info strong { color: var(--text-color); }
+        #info a { color: var(--primary-color); text-decoration: none; font-weight: 500; }
+        #info a:hover { text-decoration: underline; }
+
+        #reset { position: relative; overflow: hidden; }
+        #reset::after {
+            content: '';
             position: absolute;
-            width: 32px;
-            height: 20px;
+            left: 0; bottom: 0;
+            height: 3px;
+            width: 0%;
+            background: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-color);
         }
+        #reset.pressing::after { width: 100%; transition: width 2s linear; }
+
+        @media (max-height: 800px) {
+            h1 { font-size: 24px; margin: 20px 0 15px 0; }
+            .controls { margin-bottom: 20px; }
+            #device-container { padding: 20px 0; }
+            #info { margin-top: 30px; padding: 20px; }
+        }
+
+        body.fullscreen { background-color: var(--bg-color); justify-content: center; align-items: center; overflow: hidden; }
+        body.fullscreen h1, body.fullscreen #info { display: none; }
+        body.fullscreen #device-container {
+            padding: 0; height: 100vh; width: 100vw;
+            display: flex; align-items: center; justify-content: center;
+        }
+        body.fullscreen #device { box-shadow: 0 0 50px rgba(0,0,0,0.5); }
+
+        @media (max-width: 900px) and (orientation: landscape) {
+            h1 { display: none; }
+            #device-container { padding: 0; width: auto; margin: 0; }
+        }
+
+        #fullscreen-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-color);
+            padding: 10px;
+            border-radius: 12px;
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .theme-switcher {
+            display: flex;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 4px;
+            gap: 4px;
+        }
+        .theme-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            color: var(--secondary-text);
+        }
+        .theme-btn.active {
+            background: var(--surface-color);
+            color: var(--primary-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .theme-btn:hover:not(.active) { background: rgba(255,255,255,0.1); }
     </style>
 </head>
-<body>
-<h1>文曲星模拟器</h1>
-<button id="run" onclick="run();" disabled>run</button>
-<button id="stop" onclick="stop();" disabled>stop</button>
-<button id="reset" onclick="reset();">reset</button>
-<button id="load_demo" onclick="loadDemo();">loadDemo</button>
-<div id="wqx">
-    <div id="lcd"></div>
-    <div>
-        <button id="toogle_keypad">软键盘 开/关</button>
-        <label><input tabindex="0" id="input" type="text" placeholder="键盘输入" style="ime-mode: disabled;"/></label>
+
+<body onselectstart="return false">
+    <div id="debug-log" style="position:fixed; top:10px; left:10px; z-index:1000; background:rgba(0,0,0,0.8); color:#0f0; font-family:monospace; font-size:10px; max-height:200px; overflow-y:auto; pointer-events:none; padding:5px; border-radius:5px; display:none;"></div>
+
+    <button id="settings-toggle" onclick="toggleDrawer()" title="Settings">
+        <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.91,7.62,6.29L5.23,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.71,8.87 c-0.11,0.2-0.06,0.47,0.12,0.61l2.03,1.58C4.81,11.36,4.79,11.68,4.79,12c0,0.32,0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.11-0.2,0.06-0.47-0.12-0.61L19.14,12.94z M12,15.5c-1.93,0-3.5-1.57-3.5-3.5 s1.57-3.5,3.5-3.5s3.5,1.57,3.5,3.5S13.93,15.5,12,15.5z"/></svg>
+    </button>
+
+    <div id="overlay" onclick="toggleDrawer()"></div>
+    <div id="drawer">
+        <div class="drawer-header">
+            <h2 style="margin:0; font-size: 18px;">Settings</h2>
+            <button class="close-btn" onclick="toggleDrawer()">&times;</button>
+        </div>
+        <div class="drawer-section">
+            <h3>Emulator Controls</h3>
+            <div class="controls-grid">
+                <button id="run" onclick="run();" disabled>Run</button>
+                <button id="stop" onclick="stop();" disabled>Stop</button>
+                <button id="reset" class="full-width" title="Click: Reset CPU&#10;Hold 2s: Clear save">Reset Device</button>
+                <div id="flash_status" class="full-width" style="margin:0; padding:0; border:none; font-size:12px;">Initializing...</div>
+            </div>
+        </div>
+
+        <div class="drawer-section">
+            <h3>Display Settings</h3>
+            <div class="theme-switcher">
+                <button class="theme-btn" id="theme-system" onclick="changeTheme('system')" title="Follow System">💻</button>
+                <button class="theme-btn" id="theme-light" onclick="changeTheme('light')" title="Light Mode">☀️</button>
+                <button class="theme-btn" id="theme-dark" onclick="changeTheme('dark')" title="Dark Mode">🌙</button>
+            </div>
+            <button id="fullscreen-btn" onclick="toggleFullscreen()">Toggle Fullscreen</button>
+            <button id="install-btn" style="display: none; background-color: var(--primary-color); margin-top: 8px;" onclick="installPWA()">Install App</button>
+            <button id="clear-cache-btn" style="margin-top: 8px;" onclick="clearAppCache()">清除应用缓存</button>
+        </div>
+
+        <div class="drawer-section">
+            <h3>Keyboard Shortcuts</h3>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 8px; font-size: 13px; color: var(--secondary-text);">
+                <div>F1-F12: <span style="opacity: 0.8">Function Keys</span></div>
+                <div>Enter: <span style="opacity: 0.8">Confirm / OK</span></div>
+                <div>Esc / Ctrl: <span style="opacity: 0.8">Back / Exit</span></div>
+                <div>Arrows: <span style="opacity: 0.8">Navigation</span></div>
+                <div>PageUp / PageDown: <span style="opacity: 0.8">Page Navigation</span></div>
+                <div>A-Z: <span style="opacity: 0.8">Alpha Input</span></div>
+                <div>1-9: <span style="opacity: 0.8">Numeric Keys</span></div>
+                <div>Backspace: <span style="opacity: 0.8">F2 Key</span></div>
+                <div>Tab: <span style="opacity: 0.8">Help</span></div>
+                <div>Shift: <span style="opacity: 0.8">Shift Modifier</span></div>
+                <div>Space: <span style="opacity: 0.8">Equals (=)</span></div>
+            </div>
+        </div>
+
+        <p style="margin-top:auto; font-size: 11px; text-align: center; opacity: 0.5; color: var(--secondary-text);">
+            Fully opensource@<a href="https://github.com/leoncoolmoon/jswqx">github</a><br>
+            NC1020 Emulator v2.0 <br>
+            Persistent Storage Enabled <br>
+            支持 PWA 离线使用 <br>
+            <a href="rom.zip">ROM文件下载地址</a> <br>
+        </p>
     </div>
-    <div id="keypad">
-        <div>
-            <div class="keypad_unit" data-key="F8"><div class="keypad_unit_label">Dict</div>
-            </div><div class="keypad_unit" data-key="F9"><div class="keypad_unit_label">Card</div>
-            </div><div class="keypad_unit" data-key="F10"><div class="keypad_unit_label">Calc</div>
-            </div><div class="keypad_unit" data-key="F6"><div class="keypad_unit_label">Rem</div>
-            </div><div class="keypad_unit" data-key="F7"><div class="keypad_unit_label">Data</div>
-            </div><div class="keypad_unit" data-key="F5"><div class="keypad_unit_label">Time</div>
-            </div><div class="keypad_unit" data-key="F11"><div class="keypad_unit_label">Net</div>
-            </div><div class="keypad_unit" style="visibility: hidden">
-            </div><div class="keypad_unit" style="visibility: hidden">
-            </div><div class="keypad_unit" style="visibility: hidden"></div>
-        </div>
-        <div>
-            <div class="keypad_unit" style="visibility: hidden">
-            </div><div class="keypad_unit" style="visibility: hidden">
-            </div><div class="keypad_unit" data-key="F1"><div class="keypad_unit_label">F1</div>
-            </div><div class="keypad_unit" data-key="F2"><div class="keypad_unit_label">F2</div>
-            </div><div class="keypad_unit" data-key="F3"><div class="keypad_unit_label">F3</div>
-            </div><div class="keypad_unit" data-key="F4"><div class="keypad_unit_label">F4</div>
-            </div><div class="keypad_unit" style="visibility: hidden">
-            </div><div class="keypad_unit" style="visibility: hidden">
-            </div><div class="keypad_unit" data-key="F12"><div class="keypad_unit_label">Power</div>
-            </div><div class="keypad_unit" style="visibility: hidden"></div>
-        </div>
-        <div>
-            <div class="keypad_unit" data-key="Q"><div class="keypad_unit_label">Q</div>
-            </div><div class="keypad_unit" data-key="W"><div class="keypad_unit_label">W</div>
-            </div><div class="keypad_unit" data-key="E"><div class="keypad_unit_label">E</div>
-            </div><div class="keypad_unit" data-key="R"><div class="keypad_unit_label">R</div>
-            </div><div class="keypad_unit" data-key="T"><div class="keypad_unit_label">T</div>
-            </div><div class="keypad_unit" data-key="Y"><div class="keypad_unit_label">Y</div>
-            </div><div class="keypad_unit" data-key="U"><div class="keypad_unit_label">U</div>
-            </div><div class="keypad_unit" data-key="I"><div class="keypad_unit_label">I</div>
-            </div><div class="keypad_unit" data-key="O"><div class="keypad_unit_label">O</div>
-            </div><div class="keypad_unit" data-key="P"><div class="keypad_unit_label">P</div></div>
-        </div>
-        <div>
-            <div class="keypad_unit" data-key="A"><div class="keypad_unit_label">A</div>
-            </div><div class="keypad_unit" data-key="S"><div class="keypad_unit_label">S</div>
-            </div><div class="keypad_unit" data-key="D"><div class="keypad_unit_label">D</div>
-            </div><div class="keypad_unit" data-key="F"><div class="keypad_unit_label">F</div>
-            </div><div class="keypad_unit" data-key="G"><div class="keypad_unit_label">G</div>
-            </div><div class="keypad_unit" data-key="H"><div class="keypad_unit_label">H</div>
-            </div><div class="keypad_unit" data-key="J"><div class="keypad_unit_label">J</div>
-            </div><div class="keypad_unit" data-key="K"><div class="keypad_unit_label">K</div>
-            </div><div class="keypad_unit" data-key="L"><div class="keypad_unit_label">L</div>
-            </div><div class="keypad_unit" data-key="Enter"><div class="keypad_unit_label">Enter</div></div>
-        </div>
-        <div>
-            <div class="keypad_unit" data-key="Z"><div class="keypad_unit_label">Z</div>
-            </div><div class="keypad_unit" data-key="X"><div class="keypad_unit_label">X</div>
-            </div><div class="keypad_unit" data-key="C"><div class="keypad_unit_label">C</div>
-            </div><div class="keypad_unit" data-key="V"><div class="keypad_unit_label">V</div>
-            </div><div class="keypad_unit" data-key="B"><div class="keypad_unit_label">B</div>
-            </div><div class="keypad_unit" data-key="N"><div class="keypad_unit_label">N</div>
-            </div><div class="keypad_unit" data-key="M"><div class="keypad_unit_label">M</div>
-            </div><div class="keypad_unit" data-key="PageUp"><div class="keypad_unit_label">PgUp</div>
-            </div><div class="keypad_unit" data-key="Up"><div class="keypad_unit_label">Up</div>
-            </div><div class="keypad_unit" data-key="PageDown"><div class="keypad_unit_label">PgDn</div></div>
-        </div>
-        <div>
-            <div class="keypad_unit" data-key="Tab"><div class="keypad_unit_label">Help</div>
-            </div><div class="keypad_unit" data-key="Shift"><div class="keypad_unit_label">Shift</div>
-            </div><div class="keypad_unit" data-key="CapsLock"><div class="keypad_unit_label">Caps</div>
-            </div><div class="keypad_unit" data-key="Esc"><div class="keypad_unit_label">Esc</div>
-            </div><div class="keypad_unit" data-key="0"><div class="keypad_unit_label">0</div>
-            </div><div class="keypad_unit" data-key="Period"><div class="keypad_unit_label">.</div>
-            </div><div class="keypad_unit" data-key="Equals"><div class="keypad_unit_label">=</div>
-            </div><div class="keypad_unit" data-key="Left"><div class="keypad_unit_label">Left</div>
-            </div><div class="keypad_unit" data-key="Down"><div class="keypad_unit_label">Down</div>
-            </div><div class="keypad_unit" data-key="Right"><div class="keypad_unit_label">Right</div></div>
+
+    <h1>文曲星模拟器</h1>
+
+    <div id="device-container">
+        <div id="device">
+            <div id="outScr">
+                <div id="scr">
+                    <div id="lcd"></div>
+                </div>
+            </div>
+            <canvas id="key" width="434" height="543"></canvas>
         </div>
     </div>
-</div>
-<p>
-    <span>orginal: <a href="http://bbs.emsky.net/viewthread.php?tid=33474">http://bbs.emsky.net/viewthread.php?tid=33474</a><br/>
-        目前只在chrome浏览器测试过，别的浏览器应该也有能跑的。<br/>
-        由于ROM文件有24M之大，若加载过慢，请自行下载到硬盘上，拖拽到模拟器的屏幕区域手动加载。<br/>
-        若想要离线使用能正常加载，请在chrome启动参数中加入`--allow-file-access-from-files`。<br/>
-        <a href="./rom/obj_lu.bin">ROM文件下载地址</a></span>
-</p>
-<script>
-//    var table = document.createElement('table');
-//    table.style.cssText = 'position:fixed; right: 150px; top: 150px;';
-//    table.border = "1";
-//    for (var i=0; i<8; i++) {
-//        var row = table.insertRow(-1);
-//        for (var j=0; j<8; j++) {
-//            var cell = row.insertCell(-1);
-//            cell.innerHTML = '0x' + (i * 8 + j).toString(16);
-//            (function (i, j){
-//                cell.onmousedown = function (){
-//                    wqx.keypadmatrix[j][i] = 1;
-//                };
-//                cell.onmouseup = function (){
-//                    wqx.keypadmatrix[j][i] = 0;
-//                };
-//            })(i, j);
-//        }
-//    }
-//    document.body.appendChild(table);
-</script>
-<script>
-    var lcdDiv = document.getElementById('lcd')
-    var wqx = new Wqx(lcdDiv);
-    var keyInput = new WqxKeyInput(wqx, document.getElementById('input'));
-    var keypadDiv = document.getElementById('keypad');
-    keyInput.onpress = function (key){
-        var keyUnit = document.querySelector('div.keypad_unit[data-key="' + key + '"]');
-        if (keyUnit) {
-            keyUnit.classList.add('pressed');
-        }
-    };
-    keyInput.onrelease = function (key){
-        var keyUnit = document.querySelector('div.keypad_unit[data-key="' + key + '"]');
-        if (keyUnit) {
-            keyUnit.classList.remove('pressed');
-        }
-    };
-    keypadDiv.addEventListener('mousedown', function (evt){
-        var div = evt.target;
-        do {
-            if (div.classList.contains('keypad_unit')) {
-                keyInput.keyDown(div.getAttribute('data-key'));
-                break;
+
+    <script>
+
+        // ============================================================
+        // UI Drawer & Theme Logic
+        // ============================================================
+        function toggleDrawer() {
+            const drawer = document.getElementById('drawer');
+            const overlay = document.getElementById('overlay');
+            const isOpen = drawer.classList.contains('open');
+            if (isOpen) {
+                drawer.classList.remove('open');
+                overlay.classList.remove('show');
+                setTimeout(() => { if (!drawer.classList.contains('open')) overlay.style.display = 'none'; }, 300);
+            } else {
+                overlay.style.display = 'block';
+                setTimeout(() => { drawer.classList.add('open'); overlay.classList.add('show'); }, 10);
             }
-            div = div.parentNode;
-        } while (div && div.nodeType == 1);
-    }, false);
-    keypadDiv.addEventListener('mouseup', function (evt){
-        var div = evt.target;
-        do {
-            if (div.classList.contains('keypad_unit')) {
-                keyInput.keyUp(div.getAttribute('data-key'));
-                break;
-            }
-            div = div.parentNode;
-        } while (div && div.nodeType == 1);
-    }, false);
-    document.getElementById('toogle_keypad').addEventListener('click', function (){
-        if (keypadDiv.style.display === 'none') {
-            keypadDiv.style.display = '';
-        } else {
-            keypadDiv.style.display = 'none';
         }
-    }, false);
 
-    var romLoaded = false;
-    var norLoaded = false;
-    var xhrRom = null;
-    function check(){
-        if (romLoaded && norLoaded) {
-            document.getElementById('run').removeAttribute('disabled');
-        }
-    }
-    lcdDiv.addEventListener('dragover', function (evt){
-        evt.preventDefault();
-    }, false);
-    lcdDiv.addEventListener('drop', function (evt){
-        var file;
-        try {
-            file = evt.dataTransfer.files[0];
-        } catch(ex){}
-        var fileReader = new FileReader();
-        fileReader.addEventListener('loadend', function (evt){
-            if (!xhrRom) {
-                xhrRom.abort();
-                xhrRom = null;
+        function changeTheme(theme) {
+            if (theme === 'system') {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', theme);
             }
-            wqx.loadBROM(fileReader.result);
-            romLoaded = true;
-            check();
-        }, false);
-        fileReader.readAsArrayBuffer(file);
-        evt.preventDefault();
-    }, false);
+            localStorage.setItem('wqx_theme', theme);
+            document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+            var btn = document.getElementById('theme-' + theme);
+            if (btn) btn.classList.add('active');
+        }
 
-    function loadDemo(){
-        var xhrNor = new XMLHttpRequest();
-        xhrNor.open('GET', './rom/nc1020.fls', true);
-        xhrNor.responseType = 'arraybuffer';
-        xhrNor.addEventListener('loadend', function (){
-            wqx.loadNorFlash(xhrNor.response);
-            norLoaded = true;
-            check();
-        }, false);
-        xhrNor.send();
-        // todo: progress info
-        document.getElementById('load_demo').setAttribute('disabled', 'disabled');
-        xhrRom = new XMLHttpRequest();
-        xhrRom.addEventListener('progress', function (evt){
-            document.getElementById('load_demo').innerHTML = 'ROM加载中 ' + evt.loaded + '/' + evt.total;
-        }, false);
-        xhrRom.addEventListener('loadend', function (){
-            document.getElementById('load_demo').innerHTML = 'ROM加载完毕';
-            wqx.loadBROM(xhrRom.response);
-            romLoaded = true;
-            check();
-        }, false);
-        xhrRom.open('GET', './rom/obj_lu.bin', true);
-        xhrRom.responseType = 'arraybuffer';
-        xhrRom.send();
+        (function() {
+            var savedTheme = localStorage.getItem('wqx_theme') || 'system';
+            changeTheme(savedTheme);
+        })();
 
-    }
+        // ============================================================
+        // Machine State localStorage Persistence
+        // ============================================================
+        var STATE_STORAGE_KEY = 'wqx_state';
 
-    function run(){
-        wqx.run();
-        document.getElementById('run').setAttribute('disabled', 'disabled');
-        document.getElementById('stop').removeAttribute('disabled');
-    }
-    function stop(){
-        wqx.stop();
-        document.getElementById('stop').setAttribute('disabled', 'disabled');
-        document.getElementById('run').removeAttribute('disabled');
-    }
-    function reset(){
-        wqx.reset();
-    }
+        // ★ 修复：保存前校验 lcdbuffaddr 合法性（必须 > 0x100，否则不保存）
+        function isStateReadyToSave(wqxInstance) {
+            if (!wqxInstance) return false;
+            var addr = wqxInstance.lcdbuffaddr;
+            if (addr === null || addr === undefined || addr <= 0x100) {
+                log('⚠️ lcdbuffaddr=' + addr + '，状态未就绪，跳过保存');
+                return false;
+            }
+            return true;
+        }
 
-</script>
+        function saveAppState(wqxInstance) {
+            // ★ 修复：未就绪时不保存，防止写入坏状态覆盖好存档
+            if (!isStateReadyToSave(wqxInstance)) return false;
+            try {
+                var state = wqxInstance.saveState();
+                localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(state));
+                setFlashStatus('💾 Auto-saved');
+                return true;
+            } catch (e) {
+                setFlashStatus('⚠️ Save failed: ' + e.message);
+                return false;
+            }
+        }
+
+        function loadAppState(wqxInstance) {
+            try {
+                var stored = localStorage.getItem(STATE_STORAGE_KEY);
+                if (!stored) return false;
+                var state = JSON.parse(stored);
+                // ★ 修复：存档里的 lcdbuffaddr 必须合法才允许恢复
+                if (!state || state.lcdbuffaddr === null || state.lcdbuffaddr === undefined || state.lcdbuffaddr <= 0x100) {
+                    log('⚠️ 存档 lcdbuffaddr 不合法（值=' + (state && state.lcdbuffaddr) + '），丢弃存档');
+                    localStorage.removeItem(STATE_STORAGE_KEY);
+                    return false;
+                }
+                wqxInstance.loadState(state);
+                setFlashStatus('✅ Restored');
+                return true;
+            } catch (e) {
+                log('loadAppState error: ' + e);
+                return false;
+            }
+        }
+
+        function clearSavedState() {
+            localStorage.removeItem(STATE_STORAGE_KEY);
+            setFlashStatus('🗑️ Cleared');
+            setTimeout(() => location.reload(), 500);
+        }
+
+        (function () {
+            var btn = document.getElementById('reset');
+            var holdTimer = null;
+            var HOLD_MS = 2000;
+
+            function startHold() {
+                btn.classList.add('pressing');
+                holdTimer = setTimeout(function () { clearSavedState(); }, HOLD_MS);
+            }
+
+            function endHold() {
+                if (holdTimer !== null) {
+                    clearTimeout(holdTimer);
+                    holdTimer = null;
+                    if (btn.classList.contains('pressing')) reset();
+                }
+                btn.classList.remove('pressing');
+            }
+
+            btn.addEventListener('mousedown', startHold);
+            btn.addEventListener('mouseup', endHold);
+            btn.addEventListener('mouseleave', endHold);
+            btn.addEventListener('touchstart', function(e){ e.preventDefault(); startHold(); });
+            btn.addEventListener('touchend', function(e){ e.preventDefault(); endHold(); });
+        })();
+
+        function log(msg, color) {
+            console.log(msg);
+            var logEl = document.getElementById('debug-log');
+            if (logEl) {
+                if (color === '#f00') logEl.style.display = 'block';
+                var div = document.createElement('div');
+                div.style.color = color || '#0f0';
+                div.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+                logEl.appendChild(div);
+                logEl.scrollTop = logEl.scrollHeight;
+            }
+        }
+
+        window.onerror = function(msg, url, line, col, error) {
+            log('ERR: ' + msg + ' (' + line + ':' + col + ')', '#f00');
+            return false;
+        };
+        window.onunhandledrejection = function(event) {
+            log('PROMISE ERR: ' + event.reason, '#f00');
+        };
+
+        function setFlashStatus(msg) {
+            log(msg);
+            var el = document.getElementById('flash_status');
+            if (el) el.textContent = msg;
+        }
+
+        // ============================================================
+        // Device UI Rendering & Interaction
+        // ============================================================
+        var canvas = document.getElementById('key');
+        var ctx = canvas.getContext('2d');
+        var image = new Image();
+        var indicatorStates = new Array(9).fill(false);
+        var rulerCenters = [66.4, 98.6, 131.3, 163.8, 195.5, 227.5, 260.1, 292.2, 324.9];
+        var indicatorY = 177.5;
+
+        function redrawFrame() {
+            if (!image.complete) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.drawImage(image, 0, 0);
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillRect(15, 14, 376, 163);
+            ctx.globalCompositeOperation = 'source-over';
+            for (var i = 0; i < indicatorStates.length; i++) {
+                if (indicatorStates[i]) renderIndicator(i);
+            }
+        }
+
+        image.onload = function () { redrawFrame(); updateLayout(); };
+        image.src = 'nc1020.png';
+
+        function renderIndicator(index) {
+            var x = rulerCenters[index];
+            var y = indicatorY;
+            ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+            ctx.beginPath();
+            ctx.moveTo(x - 4, y);
+            ctx.lineTo(x + 4, y);
+            ctx.lineTo(x, y + 5);
+            ctx.fill();
+        }
+
+        function drawIndicator(index, active) {
+            if (indicatorStates[index] === active) return;
+            indicatorStates[index] = active;
+            if (!image.complete) return;
+            if (active) {
+                renderIndicator(index);
+            } else {
+                ctx.drawImage(image, rulerCenters[index] - 5, 177, 10, 10, rulerCenters[index] - 5, 177, 10, 10);
+            }
+        }
+
+        function updateLayout() {
+            var device = document.getElementById('device');
+            var isFullscreen = document.body.classList.contains('fullscreen');
+            var h1 = document.querySelector('h1');
+            var h1Height = (h1 && h1.offsetParent && !isFullscreen) ? h1.offsetHeight + 20 : 0;
+            var availableWidth = window.innerWidth - (isFullscreen ? 0 : 40);
+            var availableHeight = window.innerHeight - h1Height - (isFullscreen ? 0 : 40);
+            var s = Math.min(availableWidth / 434, availableHeight / 543);
+            s = Math.max(0.2, Math.min(s, isFullscreen ? 2.5 : 1.5));
+            device.style.transform = "scale(" + s + ")";
+        }
+
+        window.addEventListener('resize', updateLayout);
+
+        function hasPhysicalKeyboard() {
+            return window.matchMedia('(hover: hover)').matches && window.matchMedia('(pointer: fine)').matches;
+        }
+
+        async function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                try {
+                    const target = hasPhysicalKeyboard() ? document.getElementById('outScr') : document.documentElement;
+                    await target.requestFullscreen();
+                } catch (err) { console.error('无法进入全屏:', err.message); }
+            } else {
+                try { await document.exitFullscreen(); }
+                catch (err) { console.error('无法退出全屏:', err.message); }
+            }
+        }
+
+        function updateScrLayout() {
+            var outScr = document.getElementById('outScr');
+            var scr = document.getElementById('scr');
+            var isFullscreen = !!document.fullscreenElement;
+            if (isFullscreen) {
+                document.body.classList.add('fullscreen');
+                if (document.fullscreenElement === outScr) {
+                    var s = Math.min(window.innerWidth / 320, window.innerHeight / 160);
+                    scr.style.transform = "scale(" + s + ")";
+                } else {
+                    updateLayout();
+                }
+            } else {
+                document.body.classList.remove('fullscreen');
+                scr.style.transform = "scale(1)";
+                updateLayout();
+            }
+        }
+
+        document.addEventListener('fullscreenchange', updateScrLayout);
+
+        var keys = [
+            { name: 'F1', x: 403, y: 10, width: 28, height: 30 },
+            { name: 'F2', x: 403, y: 45, width: 28, height: 30 },
+            { name: 'F3', x: 403, y: 80, width: 28, height: 30 },
+            { name: 'F4', x: 403, y: 115, width: 28, height: 30 },
+            { name: 'F12', x: 400, y: 190, width: 32, height: 32 },
+            { name: 'Reset', x: 105, y: 390, width: 10, height: 10 },
+            { name: 'F8', x: 131, y: 370, width: 43, height: 35 },
+            { name: 'F9', x: 174, y: 370, width: 43, height: 35 },
+            { name: 'F10', x: 217, y: 370, width: 43, height: 35 },
+            { name: 'F7', x: 260, y: 370, width: 43, height: 35 },
+            { name: 'F6', x: 303, y: 370, width: 43, height: 35 },
+            { name: 'F5', x: 346, y: 370, width: 43, height: 35 },
+            { name: 'F11', x: 389, y: 370, width: 43, height: 35 },
+            { name: 'Q', x: 2, y: 407, width: 43, height: 32 },
+            { name: 'W', x: 45, y: 407, width: 43, height: 32 },
+            { name: 'E', x: 88, y: 407, width: 43, height: 32 },
+            { name: 'R', x: 131, y: 407, width: 43, height: 32 },
+            { name: 'T', x: 174, y: 407, width: 43, height: 32 },
+            { name: 'Y', x: 217, y: 407, width: 43, height: 32 },
+            { name: 'U', x: 260, y: 407, width: 43, height: 32 },
+            { name: 'I', x: 303, y: 407, width: 43, height: 32 },
+            { name: 'O', x: 346, y: 407, width: 43, height: 32 },
+            { name: 'P', x: 389, y: 407, width: 43, height: 32 },
+            { name: 'A', x: 2, y: 441, width: 43, height: 32 },
+            { name: 'S', x: 45, y: 441, width: 43, height: 32 },
+            { name: 'D', x: 88, y: 441, width: 43, height: 32 },
+            { name: 'F', x: 131, y: 441, width: 43, height: 32 },
+            { name: 'G', x: 174, y: 441, width: 43, height: 32 },
+            { name: 'H', x: 217, y: 441, width: 43, height: 32 },
+            { name: 'J', x: 260, y: 441, width: 43, height: 32 },
+            { name: 'K', x: 303, y: 441, width: 43, height: 32 },
+            { name: 'L', x: 346, y: 441, width: 43, height: 32 },
+            { name: 'Enter', x: 389, y: 441, width: 43, height: 32 },
+            { name: 'Z', x: 2, y: 476, width: 43, height: 32 },
+            { name: 'X', x: 45, y: 476, width: 43, height: 32 },
+            { name: 'C', x: 88, y: 476, width: 43, height: 32 },
+            { name: 'V', x: 131, y: 476, width: 43, height: 32 },
+            { name: 'B', x: 174, y: 476, width: 43, height: 32 },
+            { name: 'N', x: 217, y: 476, width: 43, height: 32 },
+            { name: 'M', x: 260, y: 476, width: 43, height: 32 },
+            { name: 'PgUp', x: 303, y: 476, width: 43, height: 32 },
+            { name: 'Up', x: 346, y: 476, width: 43, height: 32 },
+            { name: 'PgDn', x: 389, y: 476, width: 43, height: 32 },
+            { name: 'Tab', x: 2, y: 510, width: 43, height: 32 },
+            { name: 'Shift', x: 45, y: 510, width: 43, height: 32 },
+            { name: 'CapsLock', x: 88, y: 510, width: 43, height: 32 },
+            { name: 'Esc', x: 131, y: 510, width: 43, height: 32 },
+            { name: '0', x: 174, y: 510, width: 43, height: 32 },
+            { name: 'Period', x: 217, y: 510, width: 43, height: 32 },
+            { name: 'Equals', x: 260, y: 510, width: 43, height: 32 },
+            { name: 'Left', x: 303, y: 510, width: 43, height: 32 },
+            { name: 'Down', x: 346, y: 510, width: 43, height: 32 },
+            { name: 'Right', x: 389, y: 510, width: 43, height: 32 },
+        ];
+
+        function handleMouseEvent(e, isDown) {
+            var rect = canvas.getBoundingClientRect();
+            var s = rect.width / 434;
+            var x = (e.clientX - rect.left) / s;
+            var y = (e.clientY - rect.top) / s;
+            keyAction(getKeyAt(x, y), isDown);
+        }
+
+        canvas.addEventListener('mousedown', function(e) { handleMouseEvent(e, true); });
+        canvas.addEventListener('mouseup', function(e) { handleMouseEvent(e, false); });
+        canvas.addEventListener('mouseleave', function(e) { handleMouseEvent(e, false); });
+        canvas.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            var rect = canvas.getBoundingClientRect();
+            var s = rect.width / 434;
+            keyAction(getKeyAt((e.touches[0].clientX - rect.left) / s, (e.touches[0].clientY - rect.top) / s), true);
+        }, {passive: false});
+        canvas.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            var rect = canvas.getBoundingClientRect();
+            var s = rect.width / 434;
+            keyAction(getKeyAt((e.changedTouches[0].clientX - rect.left) / s, (e.changedTouches[0].clientY - rect.top) / s), false);
+        }, {passive: false});
+
+        function getKeyAt(x, y) {
+            for (var i = 0; i < keys.length; i++) {
+                if (keys[i].x <= x && x <= keys[i].x + keys[i].width &&
+                    keys[i].y <= y && y <= keys[i].y + keys[i].height) {
+                    return keys[i].name;
+                }
+            }
+            return null;
+        }
+
+        function keyAction(name, isDown) {
+            if (name != null) {
+                if (isDown) {
+                    keyInput.keyDown(name);
+                } else {
+                    if (name === "Reset") reset();
+                    else keyInput.keyUp(name);
+                }
+            }
+        }
+
+        // ============================================================
+        // Emulator Lifecycle
+        // ============================================================
+        var wqxDiv = document.getElementById('lcd');
+        var wqx = new Wqx(wqxDiv);
+        var keyInput = new WqxKeyInput(wqx, document.body);
+
+        // ★ 修复：monkey-patch updateLCD 时先检查 lcdbuffaddr 是否合法
+        var _origUpdateLCD = wqx.updateLCD.bind(wqx);
+        wqx.updateLCD = function(addr, value) {
+            // lcdbuffaddr 未就绪时直接跳过，避免 NaN 计算
+            if (!this.lcdbuffaddr || this.lcdbuffaddr <= 0x100) return;
+            var offset = addr - this.lcdbuffaddr;
+            if (offset < 0 || offset >= 1600) return;
+            var row = Math.floor(offset / 20);
+            var col = offset % 20;
+            if (col === 0) {
+                var active = (value & 0x80) !== 0;
+                if (row >= 64 && row <= 72) {
+                    drawIndicator(row - 64, active);
+                }
+            }
+            _origUpdateLCD(addr, value);
+        };
+
+        // FLS 拖放更新
+        document.addEventListener('dragover', function(e) { e.preventDefault(); });
+        document.addEventListener('drop', function(e) {
+            e.preventDefault();
+            var file = e.dataTransfer.files[0];
+            if (!file || !file.name.endsWith('.fls')) return;
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                wqx.loadNorFlash(ev.target.result);
+                saveAppState(wqx);
+                setFlashStatus('💾 已加载 ' + file.name);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        var romLoaded = false;
+        var norLoaded = false;
+        var _stateRestored = false;
+
+        function check() {
+            if (!romLoaded || !norLoaded) return;
+            if (_stateRestored) {
+                wqx.syncCalendar();
+                wqx.startFrame();
+                setTimeout(() => { wqx.syncClock(); log('Delayed clock sync completed'); }, 2000);
+            } else {
+                wqx.run();
+                wqx.syncCalendar();
+            }
+            document.getElementById('run').disabled = true;
+            document.getElementById('stop').disabled = false;
+        }
+
+        function loadZip() {
+            log('Loading rom.zip...');
+            var xhrZip = new XMLHttpRequest();
+            xhrZip.open('GET', 'rom.zip', true);
+            xhrZip.responseType = 'arraybuffer';
+            xhrZip.onload = function() {
+                if (xhrZip.status === 200) {
+                    log('rom.zip loaded, mounting BFS...');
+                    mountBFS(xhrZip.response);
+                } else {
+                    setFlashStatus('❌ ROM Load Error: ' + xhrZip.status);
+                }
+            };
+            xhrZip.onerror = function() { setFlashStatus('❌ Network Error'); };
+            xhrZip.send();
+        }
+
+        function mountBFS(zipData) {
+            try {
+                var Buffer = BrowserFS.BFSRequire('buffer').Buffer;
+                BrowserFS.configure({ fs: "ZipFS", options: { zipData: Buffer.from(zipData) } }, function(e) {
+                    if (e) { setFlashStatus('❌ FS Error: ' + e); return; }
+                    log('BFS configured, reading files...');
+                    var fs = BrowserFS.BFSRequire('fs');
+                    fs.readFile('/obj_lu.bin', function(err, data) {
+                        if (err) { setFlashStatus('❌ Missing obj_lu.bin'); return; }
+                        log('obj_lu.bin loaded');
+                        wqx.loadBROM(data);
+                        romLoaded = true;
+
+                        // ★ 修复：ROM加载完成后再检查存档，保证 volume array 已就绪
+                        if (loadAppState(wqx)) {
+                            log('State restored from storage');
+                            norLoaded = true;
+                            _stateRestored = true;
+                            check();
+                        } else {
+                            log('No valid saved state, reading nc1020.fls...');
+                            fs.readFile('/nc1020.fls', function(err, data) {
+                                if (err) { setFlashStatus('❌ Missing nc1020.fls'); return; }
+                                log('nc1020.fls loaded');
+                                wqx.loadNorFlash(data);
+                                norLoaded = true;
+                                _stateRestored = false;
+                                check();
+                            });
+                        }
+                    });
+                });
+            } catch (err) {
+                log('BFS Exception: ' + err);
+            }
+        }
+
+        function run() {
+            wqx.run();
+            document.getElementById('run').disabled = true;
+            document.getElementById('stop').disabled = false;
+        }
+        function stop() {
+            wqx.stop();
+            document.getElementById('stop').disabled = true;
+            document.getElementById('run').disabled = false;
+        }
+        function reset() { wqx.reset(); }
+
+        window.addEventListener('load', function() {
+            log('App started, initializing...');
+            try { loadZip(); }
+            catch(e) { log('Fatal initialization error: ' + e, '#f00'); }
+
+            window.addEventListener('pagehide', function() {
+                if (wqx) saveAppState(wqx);
+            });
+            document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'hidden' && wqx) saveAppState(wqx);
+            });
+
+            if ('serviceWorker' in navigator) {
+                var refreshing = false;
+                    navigator.serviceWorker.addEventListener('controllerchange', function() {
+                        if (refreshing) return;
+                        refreshing = true;
+                        window.location.reload();
+                    });
+                    
+                    navigator.serviceWorker.register('./sw.js').then(function(registration) {
+                        log('SW registered: ' + registration.scope);
+                        registration.onupdatefound = function() {
+                            var installingWorker = registration.installing;
+                            installingWorker.onstatechange = function() {
+                                if (installingWorker.state === 'installed') {
+                                    if (navigator.serviceWorker.controller) {
+                                        log('新版本已就绪，将自动刷新...');
+                                        setFlashStatus('🔄 更新中...');
+                                        // 不弹 confirm，让 controllerchange 自动处理刷新
+                                    } else {
+                                        log('Content cached for offline use.');
+                                    }
+                                }
+                            };
+                        };
+                    }, function(err) {
+                        log('SW registration failed: ' + err, '#f00');
+                    });
+            }
+        });
+
+        // ============================================================
+        // PWA Install Logic
+        // ============================================================
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-btn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (installBtn) installBtn.style.display = 'block';
+            log('PWA install prompt available');
+        });
+
+        async function installPWA() {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            log('User response: ' + outcome);
+            deferredPrompt = null;
+            if (installBtn) installBtn.style.display = 'none';
+        }
+
+        async function clearAppCache() {
+            if (confirm('确定要清除应用缓存并重新加载吗？')) {
+                try {
+                    if ('serviceWorker' in navigator) {
+                        const registrations = await navigator.serviceWorker.getRegistrations();
+                        for (const r of registrations) await r.unregister();
+                    }
+                    if ('caches' in window) {
+                        const names = await caches.keys();
+                        for (const name of names) await caches.delete(name);
+                    }
+                    window.location.reload(true);
+                } catch (err) {
+                    alert('清除缓存失败: ' + err.message);
+                }
+            }
+        }
+
+        window.addEventListener('appinstalled', () => {
+            log('PWA installed');
+            if (installBtn) installBtn.style.display = 'none';
+        });
+
+        canvas.addEventListener('webglcontextlost', function(e) { e.preventDefault(); log('Canvas context lost!', '#f00'); }, false);
+        canvas.addEventListener('contextrestored', function() { log('Canvas context restored'); redrawFrame(); }, false);
+
+    </script>
 </body>
 </html>
